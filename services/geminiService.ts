@@ -1,12 +1,5 @@
 
-import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
-import { BFHS_SYSTEM_PROMPT } from '../constants';
 import { UserProfile, MemoryNote } from '../types';
-
-const apiKey = process.env.API_KEY;
-let ai: GoogleGenAI | null = null;
-let chatSession: Chat | null = null;
-let currentUserId: string | null = null;
 
 // --- Caching Configuration ---
 const CACHE_KEY_PREFIX = 'bfhs_gemini_cache_v1_';
@@ -56,36 +49,6 @@ const FAQ_SHORT_CIRCUITS: Record<string, string> = {
     "detention": "**Detention Hierarchy**\n\n1. **Teacher Detention**: up to 1 hr before/after school or during lunch.\n2. **Administrative Detention**: 1 hr (for 5 tardies or minor infractions).\n3. **Extended Detention**: 2+ hrs (for cell phones, cutting class).\n4. **Saturday Detention**: 3-4 hrs (for repeated infractions).\n5. **Suspension (ISS/OSS)**: For major infractions (fighting, bullying, repeated violations).",
 
     "graduation": "**Graduation Requirements**\n\n**Total Credits**: 24 Units\n\n- **English**: 4 credits\n- **Math**: 4 credits\n- **Science**: 4 credits (Bio, Chem, Physics + 1)\n- **Social Studies**: 4 credits (Civics, US Hist + 2)\n- **World Language**: 3 credits (2 in same language)\n- **PE/Health**: 2 credits\n- **Arts**: 1 credit\n- **Electives**: 2 credits\n\n*Must also complete 3 AP courses and 1 Research Intensive course.*"
-};
-
-export const initializeGenAI = () => {
-  if (apiKey) {
-    ai = new GoogleGenAI({ apiKey });
-  } else {
-    console.error("API_KEY is missing");
-  }
-};
-
-// We reset session if the user changes
-export const resetChatSession = () => {
-  chatSession = null;
-};
-
-export const getChatSession = async (): Promise<Chat> => {
-  if (!ai) initializeGenAI();
-  if (!ai) throw new Error("Gemini API not initialized");
-
-  if (!chatSession) {
-    chatSession = ai.chats.create({
-      model: "gemini-3-flash-preview",
-      config: {
-        systemInstruction: BFHS_SYSTEM_PROMPT,
-        temperature: 0.7,
-        tools: [{ googleSearch: {} }],
-      },
-    });
-  }
-  return chatSession;
 };
 
 // --- Caching Helper Functions ---
@@ -171,16 +134,6 @@ export const sendMessageToGemini = async (
         if (cachedResponse) return cachedResponse;
     }
 
-    // --- API CALL ---
-
-    // If user changed, reset session (simple check)
-    if (userContext?.profile?.uid && userContext.profile.uid !== currentUserId) {
-        resetChatSession();
-        currentUserId = userContext.profile.uid;
-    }
-
-    const session = await getChatSession();
-    
     // Construct the context block
     let contextString = "";
     if (userContext?.profile && userContext.profile.allowMemory) {
@@ -197,55 +150,24 @@ export const sendMessageToGemini = async (
     // Prepend context to the user message
     const finalMessageText = contextString + message;
 
-    let contentToSend: any = finalMessageText;
+    // --- API CALL ---
+    const response = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: finalMessageText,
+        imageBase64,
+        userId: userContext?.profile?.uid || null,
+      }),
+    });
 
-    // If an image is provided, we must send a parts array
-    if (imageBase64) {
-        // Strip data:image/jpeg;base64, prefix if present for the API call
-        const cleanBase64 = imageBase64.split(',')[1] || imageBase64;
-        
-        contentToSend = [
-            { text: finalMessageText },
-            {
-                inlineData: {
-                    mimeType: 'image/jpeg',
-                    data: cleanBase64
-                }
-            }
-        ];
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `Gemini proxy error: ${response.status}`);
     }
 
-    const result = await session.sendMessage({ message: contentToSend });
-    let textResponse = result.text || "I'm sorry, I couldn't generate a response.";
-
-    // 3. Log Token Usage (Cost Tracking)
-    if (result.usageMetadata) {
-        console.group("💎 Gemini Token Usage");
-        console.log("Prompt Tokens:", result.usageMetadata.promptTokenCount);
-        console.log("Output Tokens:", result.usageMetadata.candidatesTokenCount);
-        console.log("Total Tokens:", result.usageMetadata.totalTokenCount);
-        console.groupEnd();
-    }
-
-    // Append grounding sources if available (Google Search results)
-    const groundingChunks = result.candidates?.[0]?.groundingMetadata?.groundingChunks;
-    if (groundingChunks) {
-      const uniqueSources = new Map();
-      groundingChunks.forEach((chunk: any) => {
-        if (chunk.web?.uri && chunk.web?.title) {
-          uniqueSources.set(chunk.web.uri, chunk.web.title);
-        }
-      });
-
-      if (uniqueSources.size > 0) {
-        textResponse += "\n\n---\n**Sources found via Google Search:**\n";
-        let index = 1;
-        uniqueSources.forEach((title, uri) => {
-            textResponse += `${index}. [${title}](${uri})\n`;
-            index++;
-        });
-      }
-    }
+    const data = await response.json();
+    const textResponse = data?.text || "I'm sorry, I couldn't generate a response.";
 
     // 4. Save to Cache
     // Only cache if no memory notes were involved and no image was used
