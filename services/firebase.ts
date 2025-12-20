@@ -27,14 +27,18 @@ import { UserProfile, MemoryNote } from "../types";
 // --- Configuration Management ---
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDcoPcYVacPwXQuIfz9AlTMv4Edral9xwc",
-  authDomain: "bfhs-internal.firebaseapp.com",
-  projectId: "bfhs-internal",
-  storageBucket: "bfhs-internal.firebasestorage.app",
-  messagingSenderId: "743449290754",
-  appId: "1:743449290754:web:fb8005bbc080d0548a1f1b",
-  measurementId: "G-M5L1KKMM8Q"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
+
+if (!firebaseConfig.apiKey) {
+  console.warn("Missing Firebase configuration in environment variables.");
+}
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
