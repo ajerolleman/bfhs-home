@@ -336,45 +336,6 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       return () => cancelAnimationFrame(rafRef.current);
   }, [state]);
 
-  // --- Keyboard Shortcuts ---
-  useEffect(() => {
-      if (!isActive) return;
-      const handleKeyDown = (e: KeyboardEvent) => {
-          if (e.key === 'Escape') {
-              e.preventDefault();
-              if (isParkingLotOpen) {
-                  setIsParkingLotOpen(false);
-                  return;
-              }
-              if (document.fullscreenElement) {
-                  document.exitFullscreen().catch(() => {});
-              }
-              onExit();
-          }
-          
-          // Toggle Parking Lot
-          if (e.key.toLowerCase() === 'd' && state === 'running' && !isParkingLotOpen) {
-              e.preventDefault();
-              setIsParkingLotOpen(true);
-          }
-
-          // Space to toggle pause
-          const activeTag = document.activeElement?.tagName;
-          if (e.key === ' ' && !isParkingLotOpen && activeTag !== 'INPUT' && activeTag !== 'TEXTAREA') {
-              e.preventDefault();
-              if (state === 'running') {
-                  setState('paused');
-                  triggerSound('disable');
-              } else if (state === 'paused') {
-                  setState('running');
-                  triggerSound('enable');
-              }
-          }
-      };
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isActive, state, isParkingLotOpen, onExit]);
-
   // Focus input on state change
   useEffect(() => {
       if (state === 'setup' && taskInputRef.current) {

@@ -27,6 +27,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
     const [userPlaylists, setUserPlaylists] = useState<{ id: string; name: string; uri: string }[]>([]);
     const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
     const [playlistError, setPlaylistError] = useState<string | null>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
     const [playerKey, setPlayerKey] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
     const artworkRef = useRef<string | null>(null);
@@ -35,6 +36,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
     const lastPlaybackRef = useRef(0);
     const retryCountRef = useRef(0);
     const loadStartRef = useRef(0);
+    const playRequestRef = useRef(0);
 
     useEffect(() => {
         if (uris && uris.length > 0) {
@@ -87,6 +89,17 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
             images?.[2]?.url ||
             null;
         updateArtwork(nextUrl);
+        if (typeof state?.isPlaying === 'boolean') {
+            if (state.isPlaying) {
+                setIsPlaying(true);
+                playRequestRef.current = 0;
+            } else {
+                const requestedAt = playRequestRef.current;
+                if (!requestedAt || Date.now() - requestedAt > 2000) {
+                    setIsPlaying(false);
+                }
+            }
+        }
         if (state?.track?.uri || state?.track?.name) {
             lastPlaybackRef.current = Date.now();
             retryCountRef.current = 0;
@@ -141,8 +154,30 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
         setSelectedPlaylistId(nextId);
         setActiveUris(nextUris && nextUris.length ? nextUris : undefined);
         setSelectedLabel(label);
+        playRequestRef.current = Date.now();
+        setIsPlaying(true);
         fetchNowPlaying(250, true);
     }, [fetchNowPlaying]);
+
+    const togglePlayback = useCallback(async () => {
+        if (!token) return;
+        const nextPlayState = !isPlaying;
+        if (nextPlayState) {
+            playRequestRef.current = Date.now();
+        } else {
+            playRequestRef.current = 0;
+        }
+        setIsPlaying(nextPlayState);
+        try {
+            await fetch(`https://api.spotify.com/v1/me/player/${nextPlayState ? 'play' : 'pause'}`, {
+                method: 'PUT',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+        } catch (e) {
+            // Ignore transient playback failures.
+        }
+        fetchNowPlaying(200, true);
+    }, [token, isPlaying, fetchNowPlaying]);
 
     useEffect(() => {
         onMenuToggle?.(isMenuOpen);
@@ -220,6 +255,32 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
             })
             .finally(() => setIsLoadingPlaylists(false));
     }, [token]);
+
+    useEffect(() => {
+        if (!token) return;
+        const isTypingElement = (element: Element | null) => {
+            if (!element) return false;
+            const tag = element.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+            if ((element as HTMLElement).isContentEditable) return true;
+            const role = element.getAttribute('role');
+            return role === 'textbox' || role === 'searchbox';
+        };
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.defaultPrevented) return;
+            if (event.ctrlKey || event.metaKey || event.altKey) return;
+            const isSpace =
+                event.code === 'Space' ||
+                event.key === ' ' ||
+                event.key === 'Spacebar';
+            if (!isSpace) return;
+            if (isTypingElement(document.activeElement)) return;
+            event.preventDefault();
+            togglePlayback();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [token, togglePlayback]);
 
     if (!token) {
         return (
@@ -372,6 +433,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
                                         key={`spotify-player-${playerKey}`}
                                         token={token}
                                         uris={activeUris}
+                                        play={isPlaying}
                                         callback={handlePlayback}
                                         layout="compact"
                                         hideCoverArt={true}
