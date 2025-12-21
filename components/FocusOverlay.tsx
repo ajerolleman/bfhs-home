@@ -129,7 +129,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const [taskName, setTaskName] = useState('');
   const [parkingLotItems, setParkingLotItems] = useState<{text: string, time: Date}[]>([]);
   const [isCalmMode, setIsCalmMode] = useState(true);
-  const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+  const [isSoundEnabled] = useState(false);
   const [isAmbienceEnabled, setIsAmbienceEnabled] = useState(false);
   const [ambienceLevel, setAmbienceLevel] = useState(0.14);
   const [backgroundMode, setBackgroundMode] = useState<'calm' | 'forest' | 'dusk'>('calm');
@@ -383,7 +383,6 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
 
   const maxTotalSeconds = 59 * 60 + 59;
   const setupTotalSeconds = Math.max(60, Math.min(maxTotalSeconds, Math.round(minutes * 60)));
-  const setupProgress = setupTotalSeconds / maxTotalSeconds;
   const runningProgress = sessionTotalSeconds
       ? Math.max(0, Math.min(1, 1 - secondsRemaining / sessionTotalSeconds))
       : 0;
@@ -408,7 +407,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
 
       <div className="relative z-10 flex flex-col h-full animate-fade-in">
           {/* Focus Header */}
-          <div className="w-full px-6 py-4 flex items-center justify-between bg-[linear-gradient(135deg,#12261E,#0F2019)] border-b border-white/10">
+          <div className="w-full px-6 py-4 flex items-center justify-between bg-[linear-gradient(135deg,#12261E,#0F2019)] border-b border-white/10 relative">
               <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center">
                       <img 
@@ -423,6 +422,10 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                   </div>
               </div>
 
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+                  <div className="text-xs font-bold uppercase tracking-[0.35em] text-white/80">Focus Session</div>
+              </div>
+
               {nextPeriod && (state === 'running' || state === 'setup') && (
                   <div className="hidden md:flex flex-col items-center text-xs text-white/70">
                       <span className="text-[10px] uppercase font-bold tracking-widest text-falcon-gold">Next Period</span>
@@ -431,6 +434,22 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
               )}
 
               <div className="flex items-center gap-3">
+                  <div className="hidden lg:flex items-center gap-2">
+                      <span className="text-[10px] uppercase font-bold tracking-widest text-white/50">Background</span>
+                      <div className="flex items-center gap-2">
+                          {(['calm', 'forest', 'dusk'] as const).map((mode) => (
+                              <button
+                                  key={mode}
+                                  onClick={() => { setBackgroundMode(mode); triggerSound('press'); }}
+                                  className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
+                                      backgroundMode === mode ? 'border-falcon-gold/40 text-falcon-gold bg-white/5' : 'border-white/10 text-gray-400'
+                                  }`}
+                              >
+                                  {mode}
+                              </button>
+                          ))}
+                      </div>
+                  </div>
                   <button 
                      onClick={onExit} 
                      className="text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors"
@@ -445,48 +464,109 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
               <div ref={topRef} className="h-0 w-full" />
               {/* Main Content */}
               <div className="flex flex-col items-center px-4 md:px-8 pt-6 pb-10">
-                  <div className="w-full max-w-5xl flex flex-col lg:flex-row gap-8 items-center lg:items-start">
-                      {/* Timer Card */}
-                      <div className="w-full lg:w-[55%] rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.7)]">
-                      <div className="flex items-center justify-between mb-6">
-                          <span className="text-xs font-bold uppercase tracking-widest text-falcon-gold">Focus Timer</span>
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">
-                              {state === 'running' ? 'In Session' : state === 'paused' ? 'Paused' : state === 'completed' ? 'Complete' : 'Ready'}
-                          </span>
-                      </div>
-
-                      {(state === 'setup' || state === 'running' || state === 'paused') && (
-                          <div className="flex flex-col items-center">
-                              {state !== 'setup' && (
-                                  <div className="mb-6 text-center">
-                                      <h3 className="text-xl font-bold text-white/90">{taskName || 'Focus Session'}</h3>
-                                      <p className="text-xs text-falcon-gold font-bold uppercase tracking-widest mt-1">
-                                          {state === 'paused' ? 'Session Paused' : 'Focusing'}
-                                      </p>
+                  <div className="w-full max-w-6xl">
+                      <div className="w-full max-w-3xl mx-auto">
+                          <div className="flex flex-col items-center gap-4 text-center">
+                              {state === 'setup' ? (
+                                  <div className="w-full max-w-2xl">
+                                      <input 
+                                          ref={taskInputRef}
+                                          type="text" 
+                                          value={taskName}
+                                          onChange={(e) => setTaskName(e.target.value)}
+                                          onKeyDown={(e) => e.key === 'Enter' && state === 'setup' && startSession()}
+                                          placeholder="What are you working on?"
+                                          disabled={state !== 'setup'}
+                                          className="w-full bg-black/30 border border-white/10 rounded-full px-5 py-3 text-white placeholder-gray-500 focus:border-falcon-gold outline-none text-sm disabled:opacity-60"
+                                      />
+                                  </div>
+                              ) : (
+                                  <div className="text-3xl md:text-4xl font-bold text-white tracking-tight">
+                                      {taskName || 'Focus Session'}
                                   </div>
                               )}
 
-                              <div className="w-full max-w-xl">
+                          <div className="flex flex-wrap items-center justify-center gap-3">
+                              {state === 'setup' && (
+                                  <button 
+                                     onClick={startSession}
+                                     className="magnetic-btn px-10 py-3 bg-white text-black font-bold rounded-full hover:scale-105 hover:bg-falcon-gold transition-all shadow-lg"
+                                  >
+                                      Start Focus
+                                  </button>
+                              )}
+
+                              {(state === 'running' || state === 'paused') && (
+                                  <>
+                                      <button 
+                                         onClick={() => {
+                                             setState(state === 'running' ? 'paused' : 'running');
+                                             triggerSound('press');
+                                         }}
+                                         className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white border border-white/10 transition-all"
+                                      >
+                                          {state === 'running' ? (
+                                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
+                                          ) : (
+                                              <svg className="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                                          )}
+                                      </button>
+                                      
+                                      <button 
+                                          onClick={() => { setIsParkingLotOpen(true); triggerSound('press'); }}
+                                          className="h-12 px-5 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center gap-2 text-xs font-bold transition-all"
+                                          title="Press 'D'"
+                                      >
+                                          <span>🧠</span> Capture Distraction
+                                      </button>
+
+                                      {state === 'paused' && (
+                                          <button 
+                                             onClick={() => { setState('setup'); triggerSound('press'); }}
+                                             className="h-12 px-5 rounded-full bg-red-500/20 text-red-200 hover:bg-red-500/30 border border-red-500/30 text-xs font-bold transition-all"
+                                          >
+                                              End
+                                          </button>
+                                      )}
+                                  </>
+                              )}
+                          </div>
+
+                          <div className="flex flex-wrap items-center justify-center gap-2">
+                              <button
+                                  onClick={() => { setIsCalmMode(!isCalmMode); triggerSound('press'); }}
+                                  className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border ${isCalmMode ? 'bg-white/10 border-white/20 text-white' : 'border-gray-700 text-gray-400'}`}
+                              >
+                                  Calm Mode
+                              </button>
+                              <button
+                                  onClick={() => { setIsBreathingCueEnabled(!isBreathingCueEnabled); triggerSound('press'); }}
+                                  className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border ${isBreathingCueEnabled ? 'bg-white/10 border-white/20 text-white' : 'border-gray-700 text-gray-400'}`}
+                              >
+                                  Breathing Cue
+                              </button>
+                          </div>
+
+                          {isBreathingCueEnabled && state === 'running' && (
+                              <div className="text-[11px] uppercase tracking-[0.3em] text-white/70 animate-breathe">
+                                  Breathe In · Breathe Out
+                              </div>
+                          )}
+                          
+                          {(state === 'setup' || state === 'running' || state === 'paused') && (
+                              <div className="w-full max-w-xl mt-4">
                                   <div className="text-center">
                                       <div className={`font-mono font-bold text-white tracking-tighter drop-shadow-md transition-all duration-300 ${state === 'setup' ? 'text-6xl' : 'text-5xl'}`}>
                                           {formatTime(state === 'setup' ? setupTotalSeconds : secondsRemaining)}
                                       </div>
                                       <div className="text-[10px] text-gray-400 uppercase tracking-[0.2em] mt-2">
-                                          {state === 'setup' ? 'Set your focus duration' : 'Stay steady'}
+                                          {state === 'setup' ? 'Set your focus duration' : 'Minutes Remaining'}
                                       </div>
                                   </div>
 
-                                  <div className="mt-6">
-                                      <div className="relative h-3 rounded-full bg-white/10 overflow-hidden">
-                                          <div
-                                              className={`absolute inset-y-0 left-0 ${state === 'setup' ? 'bg-falcon-gold/90' : 'bg-emerald-400/90'} transition-[width] duration-500 ease-out`}
-                                              style={{ width: `${(state === 'setup' ? setupProgress : runningProgress) * 100}%` }}
-                                          />
-                                          <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent pointer-events-none"></div>
-                                      </div>
-
-                                      {state === 'setup' && (
-                                          <div className="mt-4">
+                                  <div className="mt-4 w-full">
+                                      {state === 'setup' ? (
+                                          <div>
                                               <input
                                                   type="range"
                                                   min="60"
@@ -494,73 +574,29 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                                   step="5"
                                                   value={setupTotalSeconds}
                                                   onChange={(e) => setMinutes(Number(e.target.value) / 60)}
-                                                  className="w-full accent-falcon-gold"
+                                                  className="w-full h-3 md:h-4 accent-falcon-gold"
                                               />
                                               <div className="mt-2 flex justify-between text-[10px] text-white/50 uppercase tracking-[0.2em]">
                                                   <span>1:00</span>
                                                   <span>59:59</span>
                                               </div>
                                           </div>
+                                      ) : (
+                                          <div className="relative h-4 md:h-5 rounded-full bg-white/15 overflow-hidden">
+                                              <div
+                                                  className="absolute inset-y-0 left-0 bg-emerald-400/90 transition-[width] duration-500 ease-out"
+                                                  style={{ width: `${Math.max(0, (1 - runningProgress)) * 100}%` }}
+                                              />
+                                          </div>
                                       )}
                                   </div>
                               </div>
-
-                              {isBreathingCueEnabled && state === 'running' && (
-                                  <div className="mt-4 text-[11px] uppercase tracking-[0.3em] text-white/70 animate-breathe">
-                                      Breathe In · Breathe Out
-                                  </div>
-                              )}
-
-                              <div className="mt-8 h-14 flex items-center justify-center">
-                                  {state === 'setup' && (
-                                      <button 
-                                         onClick={startSession}
-                                         className="magnetic-btn px-10 py-3 bg-white text-black font-bold rounded-full hover:scale-105 hover:bg-falcon-gold transition-all shadow-lg"
-                                      >
-                                          Start Focus
-                                      </button>
-                                  )}
-
-                                  {(state === 'running' || state === 'paused') && (
-                                      <div className="flex gap-4">
-                                          <button 
-                                             onClick={() => {
-                                                 setState(state === 'running' ? 'paused' : 'running');
-                                                 triggerSound('press');
-                                             }}
-                                             className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white border border-white/10 transition-all"
-                                          >
-                                              {state === 'running' ? (
-                                                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
-                                              ) : (
-                                                  <svg className="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                                              )}
-                                          </button>
-                                          
-                                          <button 
-                                              onClick={() => { setIsParkingLotOpen(true); triggerSound('press'); }}
-                                              className="h-12 px-5 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center gap-2 text-xs font-bold transition-all"
-                                              title="Press 'D'"
-                                          >
-                                              <span>🧠</span> Capture Distraction
-                                          </button>
-
-                                          {state === 'paused' && (
-                                              <button 
-                                                 onClick={() => { setState('setup'); triggerSound('press'); }}
-                                                 className="h-12 px-5 rounded-full bg-red-500/20 text-red-200 hover:bg-red-500/30 border border-red-500/30 text-xs font-bold transition-all"
-                                              >
-                                                  End
-                                              </button>
-                                          )}
-                                      </div>
-                                  )}
-                              </div>
+                          )}
                           </div>
-                      )}
+                      </div>
 
-                      {state === 'completed' && (
-                          <div className="max-w-md w-full mx-auto animate-fade-in-up">
+                      {state === 'completed' ? (
+                          <div className="mt-12 max-w-md w-full mx-auto animate-fade-in-up">
                               <div className="text-center mb-8">
                                   <div className="text-5xl mb-4">🎉</div>
                                   <h2 className="text-2xl font-bold text-white mb-2">Session Complete</h2>
@@ -602,55 +638,9 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                   </button>
                               </div>
                           </div>
-                      )}
-                      </div>
-
-                      {/* Session Controls */}
-                      <div className="w-full lg:w-[45%]">
-                          <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-lg p-5 space-y-4">
-                              <div className="flex items-center justify-between">
-                                  <span className="text-xs font-bold uppercase tracking-widest text-falcon-gold">Session</span>
-                                  <span className="text-[10px] text-white/60">{formatTime(setupTotalSeconds)}</span>
-                              </div>
-                              <input 
-                                  ref={taskInputRef}
-                                  type="text" 
-                                  value={taskName}
-                                  onChange={(e) => setTaskName(e.target.value)}
-                                  onKeyDown={(e) => e.key === 'Enter' && state === 'setup' && startSession()}
-                                  placeholder="What are you working on?"
-                                  disabled={state !== 'setup'}
-                                  className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white placeholder-gray-500 focus:border-falcon-gold outline-none text-sm disabled:opacity-60"
-                              />
-
-                              <div className="grid grid-cols-2 gap-2">
-                                  <button
-                                      onClick={() => { setIsCalmMode(!isCalmMode); triggerSound('press'); }}
-                                      className={`px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border ${isCalmMode ? 'bg-white/10 border-white/20 text-white' : 'border-gray-700 text-gray-400'}`}
-                                  >
-                                      Calm Mode
-                                  </button>
-                                  <button
-                                      onClick={() => { setIsBreathingCueEnabled(!isBreathingCueEnabled); triggerSound('press'); }}
-                                      className={`px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border ${isBreathingCueEnabled ? 'bg-white/10 border-white/20 text-white' : 'border-gray-700 text-gray-400'}`}
-                                  >
-                                      Breathing Cue
-                                  </button>
-                              </div>
-
+                      ) : (
+                          <div className="mt-10 w-full max-w-md mx-auto space-y-4">
                               <div className="space-y-3">
-                                  <div className="flex items-center justify-between">
-                                      <span className="text-xs text-white/70">Sound Effects</span>
-                                      <button
-                                          onClick={() => { 
-                                              if (!isSoundEnabled && audioCtxRef.current) playSound('press', audioCtxRef.current);
-                                              setIsSoundEnabled(!isSoundEnabled);
-                                          }}
-                                          className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${isSoundEnabled ? 'border-falcon-gold/40 text-falcon-gold bg-white/5' : 'border-white/10 text-gray-400'}`}
-                                      >
-                                          {isSoundEnabled ? 'On' : 'Off'}
-                                      </button>
-                                  </div>
                                   <div className="flex items-center justify-between">
                                       <span className="text-xs text-white/70">Cafe Ambience</span>
                                       <button
@@ -670,29 +660,10 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                       className="w-full accent-falcon-gold"
                                   />
                               </div>
-
-                              <div>
-                                  <span className="text-xs text-white/70">Background</span>
-                                  <div className="mt-2 flex flex-wrap gap-2">
-                                      {(['calm', 'forest', 'dusk'] as const).map((mode) => (
-                                          <button
-                                              key={mode}
-                                              onClick={() => { setBackgroundMode(mode); triggerSound('press'); }}
-                                              className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
-                                                  backgroundMode === mode ? 'border-falcon-gold/40 text-falcon-gold bg-white/5' : 'border-white/10 text-gray-400'
-                                              }`}
-                                          >
-                                              {mode}
-                                          </button>
-                                      ))}
-                                  </div>
-                              </div>
-                              <p className="text-[11px] text-white/60">Timebox + single-tasking keeps focus steady.</p>
                           </div>
-                      </div>
+                      )}
                   </div>
               </div>
-
           </div>
 
           {/* AI Dock */}
