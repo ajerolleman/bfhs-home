@@ -90,9 +90,9 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
 }) => {
   // State
   const [state, setState] = useState<TimerState>('setup');
-  const [minutes, setMinutes] = useState(25);
-  const [secondsRemaining, setSecondsRemaining] = useState(25 * 60);
-  const [sessionTotalSeconds, setSessionTotalSeconds] = useState(25 * 60);
+  const [minutes, setMinutes] = useState(30);
+  const [secondsRemaining, setSecondsRemaining] = useState(30 * 60);
+  const [sessionTotalSeconds, setSessionTotalSeconds] = useState(30 * 60);
   
   // Settings & Data
   const [taskName, setTaskName] = useState('');
@@ -278,10 +278,12 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   };
 
   const handleAIBarFocus = () => {
+      if (state === 'setup') return;
       if (hasConversation) setIsAIExpanded(true);
   };
 
   const handleAISearch = (query: string, image?: string | null) => {
+      if (state === 'setup') return;
       onSearch(query, image);
       setIsAIExpanded(true);
   };
@@ -461,7 +463,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       <div className="relative z-10 flex flex-col h-full animate-fade-in">
           {/* Focus Header */}
           <div className={`fixed left-0 right-0 px-6 flex items-center justify-between bg-[linear-gradient(135deg,#12261E,#0F2019)] border-b border-white/10 z-[130] ${
-              showHeaderTimer ? 'top-6 md:top-8 py-5 md:py-6' : 'top-0 py-4'
+              showHeaderTimer ? 'top-0 py-7 md:py-8' : 'top-0 py-4'
           }`}>
               <div className="flex items-center gap-6">
                   <div className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center">
@@ -528,7 +530,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
           {/* Scrollable Body */}
           <div className={`flex-1 min-h-0 overflow-hidden flex flex-col ${
               showHeaderTimer
-                  ? 'pt-[104px] md:pt-[120px]'
+                  ? 'pt-[120px] md:pt-[136px]'
                   : isAIExpanded
                   ? 'pt-[72px] md:pt-[80px]'
                   : 'pt-16 md:pt-[72px]'
@@ -567,31 +569,6 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                       </div>
                   )}
                   <div className="w-full max-w-6xl flex flex-col flex-1">
-                      {state === 'setup' && (
-                          <div className="w-full">
-                              <div className="w-full max-w-3xl mx-auto flex flex-col items-center gap-3 text-center">
-                                  <div className="w-full max-w-2xl">
-                                      <input 
-                                          ref={taskInputRef}
-                                          type="text" 
-                                          value={taskName}
-                                          onChange={(e) => setTaskName(e.target.value)}
-                                          onKeyDown={(e) => e.key === 'Enter' && state === 'setup' && startSession()}
-                                          placeholder="What are you working on?"
-                                          disabled={state !== 'setup'}
-                                          className="w-full bg-black/30 border border-white/10 rounded-full px-5 py-3 text-white placeholder-gray-500 focus:border-falcon-gold outline-none text-sm disabled:opacity-60"
-                                      />
-                                  </div>
-                                  <button 
-                                     onClick={startSession}
-                                     className="magnetic-btn px-10 py-3 bg-white text-black font-bold rounded-full hover:scale-105 hover:bg-falcon-gold active:scale-95 active:translate-y-[1px] transition-all shadow-lg"
-                                  >
-                                      Start Focus
-                                  </button>
-                              </div>
-                          </div>
-                      )}
-
                       <div className={`flex-1 flex ${isFocusMode ? 'items-start' : 'items-center'} justify-center transform-gpu transition-transform duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)]`}>
                           <div className={`w-full max-w-3xl mx-auto ${isFocusMode ? 'pt-2' : ''}`}>
                               <div className={`flex flex-col items-center text-center ${isAIExpanded ? 'gap-3' : 'gap-4'}`}>
@@ -644,7 +621,19 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
 
                                   {state === 'setup' ? (
                                       <div className="flex-1 w-full flex flex-col items-center justify-center">
-                                          <div className="flex flex-wrap items-center justify-center gap-2">
+                                          <div className="w-full max-w-2xl">
+                                              <input 
+                                                  ref={taskInputRef}
+                                                  type="text" 
+                                                  value={taskName}
+                                                  onChange={(e) => setTaskName(e.target.value)}
+                                                  onKeyDown={(e) => e.key === 'Enter' && state === 'setup' && startSession()}
+                                                  placeholder="What are you working on?"
+                                                  disabled={state !== 'setup'}
+                                                  className="w-full bg-black/30 border border-white/10 rounded-full px-5 py-3 text-white placeholder-gray-500 focus:border-falcon-gold outline-none text-sm disabled:opacity-60"
+                                              />
+                                          </div>
+                                          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                                               <button
                                                   onClick={() => {
                                                       const next = !isCalmMode;
@@ -724,6 +713,12 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                                   </div>
                                               </div>
                                           )}
+                                          <button 
+                                             onClick={startSession}
+                                             className="magnetic-btn mt-5 px-10 py-3 bg-white text-black font-bold rounded-full hover:scale-105 hover:bg-falcon-gold active:scale-95 active:translate-y-[1px] transition-all shadow-lg"
+                                          >
+                                              Start Focus
+                                          </button>
                                       </div>
                                   ) : (
                                       <>
@@ -840,7 +835,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                       </div>
                   </div>
 
-                  <div className="w-full px-4 md:px-8 pointer-events-auto">
+                  <div className={`w-full px-4 md:px-8 ${state === 'setup' ? 'pointer-events-none opacity-60' : 'pointer-events-auto'}`}>
                       <div className="mx-auto w-full max-w-3xl flex flex-col items-center gap-3">
                           <div className="h-1.5 w-12 rounded-full bg-white/25 shadow-[0_0_12px_rgba(255,255,255,0.15)]"></div>
                           <AIQuickBar 
