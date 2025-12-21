@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import SpotifyWebPlayback from 'react-spotify-web-playback';
 import { getSpotifyLoginUrl, initSpotifyAuth, clearSpotifyAuth } from '../services/authService';
 
 interface SpotifyPlayerProps {
     uris?: string[];
     className?: string;
+    onArtworkChange?: (url: string | null) => void;
 }
 const PLAYLISTS = [
     { id: 'deep-focus', label: 'Deep Focus', uris: ['spotify:playlist:37i9dQZF1DWZeKCadgRdKQ'] },
@@ -13,16 +14,18 @@ const PLAYLISTS = [
     { id: 'jazz', label: 'Jazz Vibes', uris: ['spotify:playlist:37i9dQZF1DX4wta20PHgwo'] }
 ];
 
-const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className }) => {
+const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtworkChange }) => {
     const [token, setToken] = useState<string | null>(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
     const [activeUris, setActiveUris] = useState<string[] | undefined>(uris && uris.length ? uris : undefined);
     const [selectedLabel, setSelectedLabel] = useState('Continue Listening');
+    const [artworkUrl, setArtworkUrl] = useState<string | null>(null);
     const [userPlaylists, setUserPlaylists] = useState<{ id: string; name: string; uri: string }[]>([]);
     const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
     const [playlistError, setPlaylistError] = useState<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const artworkRef = useRef<string | null>(null);
 
     useEffect(() => {
         if (uris && uris.length > 0) {
@@ -52,6 +55,27 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className }) => {
         const nextToken = initSpotifyAuth();
         if (nextToken) setToken(nextToken);
     }, []);
+
+    useEffect(() => {
+        if (token) return;
+        artworkRef.current = null;
+        setArtworkUrl(null);
+        onArtworkChange?.(null);
+    }, [token, onArtworkChange]);
+
+    const handlePlayback = useCallback((state: any) => {
+        const images = state?.track?.album?.images;
+        const nextUrl =
+            images?.[0]?.url ||
+            images?.[1]?.url ||
+            images?.[2]?.url ||
+            null;
+        if (nextUrl !== artworkRef.current) {
+            artworkRef.current = nextUrl;
+            setArtworkUrl(nextUrl);
+            onArtworkChange?.(nextUrl);
+        }
+    }, [onArtworkChange]);
 
     useEffect(() => {
         if (!token) return;
@@ -103,6 +127,15 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className }) => {
         <div ref={containerRef} className={`relative w-full ${className || ''}`}>
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
+                    {artworkUrl && (
+                        <div className="h-10 w-10 rounded-lg overflow-hidden border border-white/10 bg-white/5 shrink-0">
+                            <img
+                                src={artworkUrl}
+                                alt="Now playing cover"
+                                className="h-full w-full object-cover"
+                            />
+                        </div>
+                    )}
                     <button
                         onClick={() => setIsMenuOpen((prev) => !prev)}
                         className="px-3 py-1.5 rounded-full border border-white/15 text-[10px] uppercase tracking-[0.2em] text-white/70 hover:text-white hover:border-white/40 transition"
@@ -173,6 +206,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className }) => {
                     <SpotifyWebPlayback
                         token={token}
                         uris={activeUris}
+                        callback={handlePlayback}
                         layout="compact"
                         hideCoverArt={true}
                         hideAttribution={true}

@@ -108,6 +108,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const [isParkingLotOpen, setIsParkingLotOpen] = useState(false);
   const [parkingInput, setParkingInput] = useState('');
   const [isAIExpanded, setIsAIExpanded] = useState(false);
+  const [spotifyArtworkUrl, setSpotifyArtworkUrl] = useState<string | null>(null);
   const hasConversation = (currentSession?.messages?.length ?? 0) > 0;
   
   // Refs
@@ -245,6 +246,10 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       onSearch(query, image);
       setIsAIExpanded(true);
   };
+
+  const handleSpotifyArtworkChange = useCallback((url: string | null) => {
+      setSpotifyArtworkUrl(url);
+  }, []);
 
   useEffect(() => {
       if (!isActive) return;
@@ -393,6 +398,17 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
               ? 'bg-gradient-to-br from-[#0B1120] via-[#0F182A] to-[#0C111D]'
               : 'bg-gradient-to-br from-[#0B1310] via-[#0F1C18] to-[#0B1310]'
       }`} />
+      <div
+          className="absolute inset-0 pointer-events-none transition-opacity duration-700"
+          style={{
+              backgroundImage: spotifyArtworkUrl ? `url(${spotifyArtworkUrl})` : 'none',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: spotifyArtworkUrl ? 0.4 : 0,
+              filter: 'blur(80px)',
+              transform: 'scale(1.18)'
+          }}
+      />
       <div className="absolute inset-0 bg-noise opacity-[0.05] pointer-events-none mix-blend-overlay"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),transparent_55%)] pointer-events-none"></div>
       <div className="absolute -top-32 -left-16 w-[520px] h-[520px] bg-falcon-green/20 rounded-full blur-[160px] animate-focus-orb-slow"></div>
@@ -712,7 +728,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
 
                   <div className="mt-4 flex justify-center px-4 md:px-8">
                       <div className="w-full max-w-2xl">
-                          <SpotifyPlayer className="w-full" />
+                          <SpotifyPlayer className="w-full" onArtworkChange={handleSpotifyArtworkChange} />
                       </div>
                   </div>
 
