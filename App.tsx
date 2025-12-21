@@ -258,19 +258,31 @@ const App: React.FC = () => {
             {fullPageChatOpen && <div style={{ height: headerHeight }} />}
 
             <div className={`z-[40] flex justify-center transition-all duration-1000 ease-spring ${fullPageChatOpen ? 'opacity-0 pointer-events-none absolute' : 'opacity-100 relative py-12 md:py-16'}`}>
-                <div className={`w-full flex flex-col items-center ${spotifyToken && isHomeSpotifyVisible ? 'gap-6' : 'gap-2'}`}>
+                <div className={`w-full flex flex-col items-center ${spotifyToken ? 'gap-3' : 'gap-6'}`}>
                     <AIQuickBar onSearch={handleSearch} onOpenChat={() => { if (!currentSession) setCurrentSession(createNewSession()); setFullPageChatOpen(true); }} />
                     {spotifyToken && (
                         <div className="w-full max-w-3xl px-4">
                             <button
                                 onClick={() => setIsHomeSpotifyVisible((prev) => !prev)}
                                 className={`px-3 py-1.5 rounded-full border border-gray-300 text-[10px] uppercase tracking-[0.2em] text-gray-600 hover:text-gray-900 hover:border-gray-400 transition ${
-                                    isHomeSpotifyVisible ? 'mb-3' : 'mb-0'
+                                    isHomeSpotifyVisible ? 'mb-2' : 'mb-1'
                                 }`}
                             >
                                 {isHomeSpotifyVisible ? 'Hide Spotify' : 'Show Spotify'}
                             </button>
-                            {isHomeSpotifyVisible && <SpotifyPlayer className="w-full" tone="light" />}
+                            <div className="w-full max-w-[1200px]">
+                                <Slides />
+                            </div>
+                            {isHomeSpotifyVisible && (
+                                <div className="mt-3">
+                                    <SpotifyPlayer className="w-full" tone="light" />
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    {!spotifyToken && (
+                        <div className="w-full max-w-[1200px] px-4">
+                            <Slides />
                         </div>
                     )}
                 </div>
@@ -279,7 +291,6 @@ const App: React.FC = () => {
             <main className={`container mx-auto px-4 py-4 max-w-[1200px] space-y-16 relative z-10 transition-all duration-700 ease-spring ${fullPageChatOpen ? 'opacity-0 pointer-events-none scale-95 blur-sm' : 'opacity-100 scale-100 blur-0'}`}>
                   
                   <div className="space-y-12">
-                      <Slides />
                       <News />
                   </div>
 
