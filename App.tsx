@@ -20,14 +20,8 @@ import { UserProfile, ChatMessage, MemoryNote, ChatSession } from './types';
 
 const App: React.FC = () => {
   useEffect(() => {
-    const hash = window.location.hash;
-    if (hash && hash.includes('access_token')) {
-      const token = new URLSearchParams(hash.replace('#', '?')).get('access_token');
-      if (token) {
-        localStorage.setItem('spotify_token', token);
-        window.location.hash = '';
-      }
-    }
+    const token = initSpotifyAuth();
+    if (token) console.log('Spotify connected');
   }, []);
 
   const [fullPageChatOpen, setFullPageChatOpen] = useState(false);
@@ -49,10 +43,6 @@ const App: React.FC = () => {
     }
     return () => { document.body.style.overflow = ''; };
   }, [fullPageChatOpen, isFocusMode]);
-
-  useEffect(() => {
-    initSpotifyAuth();
-  }, []);
 
   useEffect(() => {
     if (!headerRef.current) return;
@@ -142,7 +132,10 @@ const App: React.FC = () => {
 
         <div className={`transition-opacity duration-500 ${isFocusMode ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             <div ref={headerRef} className={`z-[110] transition-all duration-700 ease-spring ${fullPageChatOpen ? 'fixed top-0 left-0 right-0' : 'relative'}`}>
-                <div className={`header-safe bg-gradient-to-b from-[#1B3B2F] to-[#163127] transition-all duration-500 relative flex flex-col items-center gap-4 ${fullPageChatOpen ? 'pb-6' : 'pb-4'}`}>
+                <div
+                  style={{ paddingTop: '50px' }}
+                  className={`header-safe bg-gradient-to-b from-[#1B3B2F] to-[#163127] transition-all duration-500 relative flex flex-col items-center gap-4 ${fullPageChatOpen ? 'pb-6' : 'pb-4'}`}
+                >
                   <Header onOpenChat={() => { if (!currentSession) setCurrentSession(createNewSession()); setFullPageChatOpen(true); }} onOpenProfile={() => setIsProfileModalOpen(true)} userProfile={userProfile} currentUser={currentUser} compact={fullPageChatOpen} isFocusMode={isFocusMode} onToggleFocus={toggleFocusMode} />
                   <div className={`container mx-auto max-w-[1200px] relative z-10 flex justify-center transition-all duration-700 ease-spring ${fullPageChatOpen ? 'py-0' : 'py-2'}`}>
                       <QuickLinks compact={fullPageChatOpen} />

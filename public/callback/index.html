@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spotify Callback</title>
+    <script>
+      (function () {
+        var hash = window.location.hash || '';
+        if (hash.indexOf('access_token') !== -1) {
+          var params = new URLSearchParams(hash.replace('#', '?'));
+          var token = params.get('access_token');
+          var expiresIn = params.get('expires_in');
+          if (token) {
+            localStorage.setItem('spotify_token', token);
+            if (expiresIn) {
+              var expiresAt = Date.now() + Number(expiresIn) * 1000;
+              localStorage.setItem('spotify_token_expires_at', String(expiresAt));
+            }
+          }
+        }
+        window.location.replace(window.location.origin + '/');
+      })();
+    </script>
+  </head>
+  <body>
+    Redirecting...
+  </body>
+</html>
