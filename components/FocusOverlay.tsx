@@ -492,7 +492,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                               <div className="relative rounded-full bg-white/15 overflow-hidden h-2.5">
                                   <div
                                       className="absolute inset-y-0 left-0 bg-emerald-400/90 transition-[width] duration-500 ease-out"
-                                      style={{ width: `${Math.max(0, runningProgress) * 100}%` }}
+                                      style={{ width: `${Math.max(0, (1 - runningProgress)) * 100}%` }}
                                   />
                               </div>
                           </div>
@@ -559,7 +559,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                   <div className="relative rounded-full bg-white/15 overflow-hidden h-5 md:h-6">
                                       <div
                                           className="absolute inset-y-0 left-0 bg-emerald-400/90 transition-[width] duration-500 ease-out"
-                                          style={{ width: `${Math.max(0, runningProgress) * 100}%` }}
+                                          style={{ width: `${Math.max(0, (1 - runningProgress)) * 100}%` }}
                                       />
                                   </div>
                               </div>
