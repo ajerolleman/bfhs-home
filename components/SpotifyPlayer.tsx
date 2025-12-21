@@ -22,11 +22,14 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
     const [activeUris, setActiveUris] = useState<string[] | undefined>(uris && uris.length ? uris : undefined);
     const [selectedLabel, setSelectedLabel] = useState('Continue Listening');
     const [artworkUrl, setArtworkUrl] = useState<string | null>(null);
+    const [trackTitle, setTrackTitle] = useState<string | null>(null);
+    const [trackArtist, setTrackArtist] = useState<string | null>(null);
     const [userPlaylists, setUserPlaylists] = useState<{ id: string; name: string; uri: string }[]>([]);
     const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
     const [playlistError, setPlaylistError] = useState<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const artworkRef = useRef<string | null>(null);
+    const trackRef = useRef<{ title: string | null; artist: string | null }>({ title: null, artist: null });
 
     useEffect(() => {
         if (uris && uris.length > 0) {
@@ -75,15 +78,35 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
         }
     }, [onArtworkChange]);
 
+    const updateTrackInfo = useCallback((track: any) => {
+        const nextTitle = track?.name ? String(track.name) : null;
+        let nextArtist: string | null = null;
+        if (Array.isArray(track?.artists)) {
+            const names = track.artists
+                .map((artist: any) => artist?.name || artist)
+                .filter(Boolean);
+            nextArtist = names.length ? names.join(', ') : null;
+        } else if (typeof track?.artists === 'string') {
+            nextArtist = track.artists;
+        }
+        if (nextTitle !== trackRef.current.title || nextArtist !== trackRef.current.artist) {
+            trackRef.current = { title: nextTitle, artist: nextArtist };
+            setTrackTitle(nextTitle);
+            setTrackArtist(nextArtist);
+        }
+    }, []);
+
     const handlePlayback = useCallback((state: any) => {
-        const images = state?.track?.album?.images;
+        const track = state?.track;
+        const images = track?.album?.images;
         const nextUrl =
             images?.[0]?.url ||
             images?.[1]?.url ||
             images?.[2]?.url ||
             null;
         updateArtwork(nextUrl);
-    }, [updateArtwork]);
+        updateTrackInfo(track);
+    }, [updateArtwork, updateTrackInfo]);
 
     useEffect(() => {
         try {
@@ -102,13 +125,15 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
             })
                 .then((res) => (res.status === 204 ? null : res.json()))
                 .then((data) => {
-                    const images = data?.item?.album?.images;
+                    const track = data?.item;
+                    const images = track?.album?.images;
                     const nextUrl =
                         images?.[0]?.url ||
                         images?.[1]?.url ||
                         images?.[2]?.url ||
                         null;
                     updateArtwork(nextUrl);
+                    updateTrackInfo(track);
                 })
                 .catch(() => {
                     // Ignore transient errors; keep cached art.
@@ -144,6 +169,13 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
         container.addEventListener('click', handleClick, true);
         return () => container.removeEventListener('click', handleClick, true);
     }, [token, fetchNowPlaying]);
+
+    const handleMixSelect = useCallback((nextId: string, label: string, nextUris: string[]) => {
+        setSelectedPlaylistId(nextId);
+        setActiveUris(nextUris);
+        setSelectedLabel(label);
+        fetchNowPlaying(650);
+    }, [fetchNowPlaying]);
 
     useEffect(() => {
         if (!token) return;
@@ -208,7 +240,10 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
                         clearSpotifyAuth();
                         setToken(null);
                         setArtworkUrl(null);
+                        setTrackTitle(null);
+                        setTrackArtist(null);
                         artworkRef.current = null;
+                        trackRef.current = { title: null, artist: null };
                         onArtworkChange?.(null);
                         try {
                             localStorage.removeItem('spotify_last_artwork_url');
@@ -228,9 +263,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
                         <button
                             key={playlist.id}
                             onClick={() => {
-                                setSelectedPlaylistId(playlist.id);
-                                setActiveUris(playlist.uris);
-                                setSelectedLabel(playlist.label);
+                                handleMixSelect(playlist.id, playlist.label, playlist.uris);
                             }}
                             className={`px-3 py-2 rounded-full text-[10px] uppercase tracking-[0.2em] border transition ${
                                 selectedPlaylistId === playlist.id
@@ -245,9 +278,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
                         <button
                             key={playlist.id}
                             onClick={() => {
-                                setSelectedPlaylistId(`user:${playlist.id}`);
-                                setActiveUris([playlist.uri]);
-                                setSelectedLabel(playlist.name);
+                                handleMixSelect(`user:${playlist.id}`, playlist.name, [playlist.uri]);
                             }}
                             className="px-3 py-2 rounded-full text-[10px] uppercase tracking-[0.2em] border border-white/10 text-white/60 hover:text-white hover:border-white/40 transition"
                         >
@@ -281,6 +312,20 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
                             </div>
                         )}
                         <div className="flex-1 min-w-0">
+                            {(trackTitle || trackArtist) && (
+                                <div className="mb-2">
+                                    {trackTitle && (
+                                        <div className="text-sm font-semibold text-white truncate">
+                                            {trackTitle}
+                                        </div>
+                                    )}
+                                    {trackArtist && (
+                                        <div className="text-xs text-white/60 truncate">
+                                            {trackArtist}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             <SpotifyWebPlayback
                                 token={token}
                                 uris={activeUris}
