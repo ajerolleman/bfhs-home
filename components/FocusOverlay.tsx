@@ -53,34 +53,39 @@ const playSound = (type: 'tick' | 'press' | 'chime' | 'soft-tick', ctx: AudioCon
     
     const now = ctx.currentTime;
 
+    let stopAt = now + 0.12;
+
     if (type === 'tick') {
         // Crisp mechanical tick
         osc.type = 'square';
         osc.frequency.setValueAtTime(200, now);
-        osc.frequency.exponentialRampToValueAtTime(50, now + 0.03);
-        gain.gain.setValueAtTime(0.05, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+        osc.frequency.exponentialRampToValueAtTime(60, now + 0.04);
+        gain.gain.setValueAtTime(0.04, now);
+        gain.gain.exponentialRampToValueAtTime(0.0006, now + 0.04);
+        stopAt = now + 0.08;
     } else if (type === 'soft-tick') {
         // Very subtle tick for rotation
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(320, now);
         osc.frequency.exponentialRampToValueAtTime(180, now + 0.05);
-        gain.gain.setValueAtTime(0.012, now);
-        gain.gain.exponentialRampToValueAtTime(0.0006, now + 0.05);
+        gain.gain.setValueAtTime(0.01, now);
+        gain.gain.exponentialRampToValueAtTime(0.0005, now + 0.05);
+        stopAt = now + 0.08;
     } else if (type === 'press') {
         // Satisfying button press
         osc.type = 'sine';
         osc.frequency.setValueAtTime(400, now);
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.0006, now + 0.12);
+        stopAt = now + 0.16;
     } else if (type === 'chime') {
         // Calm completion chime
         osc.type = 'sine';
         osc.frequency.setValueAtTime(440, now); // A4
-        osc.frequency.exponentialRampToValueAtTime(880, now + 2);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 1.1);
         gain.gain.setValueAtTime(0.0, now);
-        gain.gain.linearRampToValueAtTime(0.1, now + 0.1);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 4);
+        gain.gain.linearRampToValueAtTime(0.08, now + 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.0006, now + 1.4);
         
         // Harmonic
         const osc2 = ctx.createOscillator();
@@ -88,19 +93,20 @@ const playSound = (type: 'tick' | 'press' | 'chime' | 'soft-tick', ctx: AudioCon
         osc2.type = 'triangle';
         osc2.frequency.setValueAtTime(554.37, now); // C#5
         gain2.gain.setValueAtTime(0.0, now);
-        gain2.gain.linearRampToValueAtTime(0.05, now + 0.1);
-        gain2.gain.exponentialRampToValueAtTime(0.001, now + 4);
+        gain2.gain.linearRampToValueAtTime(0.045, now + 0.08);
+        gain2.gain.exponentialRampToValueAtTime(0.0006, now + 1.4);
         
         osc2.connect(gain2);
         gain2.connect(ctx.destination);
         osc2.start();
-        osc2.stop(now + 4);
+        osc2.stop(now + 1.5);
+        stopAt = now + 1.5;
     }
 
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start();
-    osc.stop(now + 4);
+    osc.stop(stopAt);
 };
 
 const FocusOverlay: React.FC<FocusOverlayProps> = ({ 
@@ -117,13 +123,14 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const [state, setState] = useState<TimerState>('setup');
   const [minutes, setMinutes] = useState(25);
   const [secondsRemaining, setSecondsRemaining] = useState(25 * 60);
+  const [sessionTotalSeconds, setSessionTotalSeconds] = useState(25 * 60);
   
   // Settings & Data
   const [taskName, setTaskName] = useState('');
   const [parkingLotItems, setParkingLotItems] = useState<{text: string, time: Date}[]>([]);
   const [isCalmMode, setIsCalmMode] = useState(true);
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
-  const [isAmbienceEnabled, setIsAmbienceEnabled] = useState(true);
+  const [isAmbienceEnabled, setIsAmbienceEnabled] = useState(false);
   const [ambienceLevel, setAmbienceLevel] = useState(0.14);
   const [backgroundMode, setBackgroundMode] = useState<'calm' | 'forest' | 'dusk'>('calm');
   const [isBreathingCueEnabled, setIsBreathingCueEnabled] = useState(false);
@@ -132,7 +139,6 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   // UI State
   const [isParkingLotOpen, setIsParkingLotOpen] = useState(false);
   const [parkingInput, setParkingInput] = useState('');
-  const [isDragging, setIsDragging] = useState(false);
   const [isAIExpanded, setIsAIExpanded] = useState(false);
   
   // Refs
@@ -141,8 +147,6 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const ambienceLevelRef = useRef(ambienceLevel);
   const rafRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
-  const dialRef = useRef<HTMLDivElement>(null);
-  const lastMouseAngleRef = useRef<number>(0);
   const taskInputRef = useRef<HTMLInputElement>(null);
   const parkingInputRef = useRef<HTMLInputElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
@@ -333,82 +337,13 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       }
   }, [state, isParkingLotOpen]);
 
-  // --- Dial Physics ---
-  const handleStart = (e: React.MouseEvent | React.TouchEvent) => {
-      if (state !== 'setup') return;
-      setIsDragging(true);
-      
-      const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-      const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-      
-      if (dialRef.current) {
-          const rect = dialRef.current.getBoundingClientRect();
-          const centerX = rect.left + rect.width / 2;
-          const centerY = rect.top + rect.height / 2;
-          lastMouseAngleRef.current = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
-      }
-  };
-
-  const handleMove = useCallback((e: MouseEvent | TouchEvent) => {
-      if (!isDragging || state !== 'setup') return;
-      
-      const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
-      const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
-      
-      if (dialRef.current) {
-          const rect = dialRef.current.getBoundingClientRect();
-          const centerX = rect.left + rect.width / 2;
-          const centerY = rect.top + rect.height / 2;
-          
-          const currentMouseAngle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
-          let delta = currentMouseAngle - lastMouseAngleRef.current;
-          
-          if (delta > 180) delta -= 360;
-          if (delta < -180) delta += 360;
-          
-          lastMouseAngleRef.current = currentMouseAngle;
-          
-          const sensitivity = 0.4;
-          const minChange = delta * sensitivity;
-          
-          setMinutes(prev => {
-              const maxMinutes = 59 + 59 / 60;
-              const next = Math.max(1, Math.min(maxMinutes, prev + minChange));
-              // Soft tick only on integer change
-              if (Math.floor(next) !== Math.floor(prev)) triggerSound('soft-tick');
-              return next;
-          });
-      }
-  }, [isDragging, state]);
-
-  const handleEnd = () => {
-      setIsDragging(false);
-      setMinutes(m => {
-          const totalSeconds = Math.max(60, Math.min(3599, Math.round(m * 60)));
-          return totalSeconds / 60;
-      });
-  };
-
-  useEffect(() => {
-      window.addEventListener('mousemove', handleMove);
-      window.addEventListener('mouseup', handleEnd);
-      window.addEventListener('touchmove', handleMove, { passive: false });
-      window.addEventListener('touchend', handleEnd);
-      return () => {
-          window.removeEventListener('mousemove', handleMove);
-          window.removeEventListener('mouseup', handleEnd);
-          window.removeEventListener('touchmove', handleMove);
-          window.removeEventListener('touchend', handleEnd);
-      };
-  }, [handleMove]);
-
-
   // --- Helper Functions ---
   const startSession = () => {
       const totalSeconds = Math.max(60, Math.min(3599, Math.round(minutes * 60)));
       const normalizedMinutes = totalSeconds / 60;
       if (normalizedMinutes !== minutes) setMinutes(normalizedMinutes);
       if (!taskName.trim()) setTaskName('Focus Session');
+      setSessionTotalSeconds(totalSeconds);
       setSecondsRemaining(totalSeconds);
       setState('running');
       triggerSound('press');
@@ -438,32 +373,12 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Generate SVG Arc for Time Timer effect
-  const calculateArc = (percentage: number) => {
-      // percentage 0 to 1
-      const radius = 180; 
-      const center = 200;
-      // Start at top ( -90 deg)
-      const startAngle = -90 * (Math.PI / 180);
-      // End angle based on percentage (clockwise)
-      const endAngle = startAngle + (percentage * 360) * (Math.PI / 180);
-
-      const x1 = center + radius * Math.cos(startAngle);
-      const y1 = center + radius * Math.sin(startAngle);
-      const x2 = center + radius * Math.cos(endAngle);
-      const y2 = center + radius * Math.sin(endAngle);
-
-      // Flag for large arc (if > 180 deg)
-      const largeArcFlag = percentage > 0.5 ? 1 : 0;
-
-      // Move to center, Line to start, Arc to end, Close
-      return `M ${center} ${center} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
-  };
-
-  // Allow multi-turn visual in setup? Simplified: cap at 100% visual for setup > 60m
-  const visualPercentage = state === 'setup' 
-      ? Math.min(1, minutes / 60)
-      : Math.max(0, secondsRemaining / (minutes * 60));
+  const maxTotalSeconds = 59 * 60 + 59;
+  const setupTotalSeconds = Math.max(60, Math.min(maxTotalSeconds, Math.round(minutes * 60)));
+  const setupProgress = setupTotalSeconds / maxTotalSeconds;
+  const runningProgress = sessionTotalSeconds
+      ? Math.max(0, Math.min(1, 1 - secondsRemaining / sessionTotalSeconds))
+      : 0;
 
   if (!isActive) return null;
 
@@ -543,45 +458,42 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                   </div>
                               )}
 
-                              <div 
-                                  ref={dialRef}
-                                  className={`relative w-[300px] h-[300px] md:w-[380px] md:h-[380px] rounded-full shadow-[0_20px_50px_-10px_rgba(0,0,0,0.5)] select-none ${state === 'setup' ? 'cursor-grab active:cursor-grabbing' : ''}`}
-                                  onMouseDown={handleStart}
-                                  onTouchStart={handleStart}
-                              >
-                                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 p-[2px] shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]">
-                                      <div className="w-full h-full rounded-full bg-[#151b26] relative overflow-hidden">
-                                          {Array.from({ length: 12 }).map((_, i) => (
-                                              <div 
-                                                  key={i} 
-                                                  className="absolute top-0 left-1/2 w-[2px] h-[12px] bg-white/20 -ml-[1px] origin-[50%_190px]"
-                                                  style={{ transform: `rotate(${i * 30}deg) translateY(10px)` }}
-                                              />
-                                          ))}
+                              <div className="w-full max-w-xl">
+                                  <div className="text-center">
+                                      <div className={`font-mono font-bold text-white tracking-tighter drop-shadow-md transition-all duration-300 ${state === 'setup' ? 'text-6xl' : 'text-5xl'}`}>
+                                          {formatTime(state === 'setup' ? setupTotalSeconds : secondsRemaining)}
+                                      </div>
+                                      <div className="text-[10px] text-gray-400 uppercase tracking-[0.2em] mt-2">
+                                          {state === 'setup' ? 'Set your focus duration' : 'Stay steady'}
+                                      </div>
+                                  </div>
 
-                                          <svg className="absolute inset-0 w-full h-full rotate-0 pointer-events-none transform transition-all duration-500 ease-linear" viewBox="0 0 400 400">
-                                              <circle cx="200" cy="200" r="180" fill="#1a2230" />
-                                              <path 
-                                                  d={calculateArc(visualPercentage)} 
-                                                  fill={state === 'setup' ? '#EAB308' : '#10B981'} 
-                                                  fillOpacity="0.8"
-                                                  style={{ filter: 'drop-shadow(0 0 10px rgba(16, 185, 129, 0.2))' }}
-                                              />
-                                          </svg>
+                                  <div className="mt-6">
+                                      <div className="relative h-3 rounded-full bg-white/10 overflow-hidden">
+                                          <div
+                                              className={`absolute inset-y-0 left-0 ${state === 'setup' ? 'bg-falcon-gold/90' : 'bg-emerald-400/90'} transition-[width] duration-500 ease-out`}
+                                              style={{ width: `${(state === 'setup' ? setupProgress : runningProgress) * 100}%` }}
+                                          />
+                                          <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent pointer-events-none"></div>
+                                      </div>
 
-                                          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
-                                          
-                                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                              <div className="text-center">
-                                                  <div className={`font-mono font-bold text-white tracking-tighter drop-shadow-md transition-all duration-300 ${state === 'setup' ? 'text-6xl' : 'text-5xl'}`}>
-                                                      {formatTime(state === 'setup' ? Math.round(minutes * 60) : secondsRemaining)}
-                                                  </div>
-                                                  {state === 'setup' && (
-                                                      <div className="text-[10px] text-gray-400 uppercase tracking-[0.2em] mt-2">Drag to set time</div>
-                                                  )}
+                                      {state === 'setup' && (
+                                          <div className="mt-4">
+                                              <input
+                                                  type="range"
+                                                  min="60"
+                                                  max="3599"
+                                                  step="5"
+                                                  value={setupTotalSeconds}
+                                                  onChange={(e) => setMinutes(Number(e.target.value) / 60)}
+                                                  className="w-full accent-falcon-gold"
+                                              />
+                                              <div className="mt-2 flex justify-between text-[10px] text-white/50 uppercase tracking-[0.2em]">
+                                                  <span>1:00</span>
+                                                  <span>59:59</span>
                                               </div>
                                           </div>
-                                      </div>
+                                      )}
                                   </div>
                               </div>
 
@@ -644,7 +556,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                               <div className="text-center mb-8">
                                   <div className="text-5xl mb-4">🎉</div>
                                   <h2 className="text-2xl font-bold text-white mb-2">Session Complete</h2>
-                                  <p className="text-gray-400">You focused on "{taskName}" for {Math.max(1, Math.floor(minutes))} minutes.</p>
+                                  <p className="text-gray-400">You focused on "{taskName}" for {formatTime(sessionTotalSeconds)}.</p>
                               </div>
 
                               {parkingLotItems.length > 0 && (
@@ -690,7 +602,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                           <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-lg p-5 space-y-4">
                               <div className="flex items-center justify-between">
                                   <span className="text-xs font-bold uppercase tracking-widest text-falcon-gold">Session</span>
-                                  <span className="text-[10px] text-white/60">{formatTime(Math.round(minutes * 60))}</span>
+                                  <span className="text-[10px] text-white/60">{formatTime(setupTotalSeconds)}</span>
                               </div>
                               <input 
                                   ref={taskInputRef}
@@ -769,8 +681,8 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                               </div>
                               <p className="text-[11px] text-white/60">Timebox + single-tasking keeps focus steady.</p>
                           </div>
-                          <div className="mt-4">
-                              <SpotifyPlayer />
+                          <div className="mt-6">
+                              <SpotifyPlayer className="w-full" />
                           </div>
                       </div>
                   </div>
