@@ -150,14 +150,41 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
         }
     }, [token, updateArtwork]);
 
+    const startPlayback = useCallback(async (nextUris?: string[], retried = false) => {
+        if (!token) return;
+        let body: Record<string, unknown> | undefined;
+        if (nextUris && nextUris.length > 0) {
+            const isContextUri = nextUris.length === 1 && /spotify:(playlist|album|artist):/.test(nextUris[0]);
+            body = isContextUri ? { context_uri: nextUris[0] } : { uris: nextUris };
+        }
+        try {
+            const res = await fetch('https://api.spotify.com/v1/me/player/play', {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    ...(body ? { 'Content-Type': 'application/json' } : {})
+                },
+                body: body ? JSON.stringify(body) : undefined
+            });
+            if (!res.ok && !retried) {
+                window.setTimeout(() => startPlayback(nextUris, true), 600);
+            }
+        } catch (e) {
+            if (!retried) {
+                window.setTimeout(() => startPlayback(nextUris, true), 600);
+            }
+        }
+        fetchNowPlaying(200, true);
+    }, [token, fetchNowPlaying]);
+
     const handleMixSelect = useCallback((nextId: string | null, label: string, nextUris?: string[]) => {
         setSelectedPlaylistId(nextId);
         setActiveUris(nextUris && nextUris.length ? nextUris : undefined);
         setSelectedLabel(label);
         playRequestRef.current = Date.now();
         setIsPlaying(true);
-        fetchNowPlaying(250, true);
-    }, [fetchNowPlaying]);
+        startPlayback(nextUris);
+    }, [startPlayback]);
 
     const togglePlayback = useCallback(async () => {
         if (!token) return;
@@ -433,7 +460,6 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
                                         key={`spotify-player-${playerKey}`}
                                         token={token}
                                         uris={activeUris}
-                                        play={isPlaying}
                                         callback={handlePlayback}
                                         layout="compact"
                                         hideCoverArt={true}
