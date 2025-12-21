@@ -475,13 +475,13 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                               backgroundImage: `url(${spotifyArtworkUrl})`,
                               backgroundSize: 'cover',
                               backgroundPosition: 'center',
-                              filter: 'blur(36px) brightness(0.72) saturate(1.2)',
-                              transform: 'scale(1.2)',
-                              opacity: 0.85
+                              filter: 'blur(30px) brightness(0.85) saturate(1.25)',
+                              transform: 'scale(1.18)',
+                              opacity: 0.9
                           }}
                       />
-                      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(120deg,rgba(8,26,18,0.88),rgba(12,30,22,0.82),rgba(6,18,14,0.9))]" />
-                      <div className="absolute inset-0 pointer-events-none bg-black/20" />
+                      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(120deg,rgba(8,26,18,0.78),rgba(12,30,22,0.7),rgba(6,18,14,0.82))]" />
+                      <div className="absolute inset-0 pointer-events-none bg-black/10" />
                   </>
               )}
               <div className="flex items-center gap-6">

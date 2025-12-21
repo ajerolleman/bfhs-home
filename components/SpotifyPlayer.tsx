@@ -54,7 +54,8 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
 
     useEffect(() => {
         onMenuToggle?.(isMenuOpen);
-    }, [isMenuOpen, onMenuToggle]);
+        if (isMenuOpen) fetchNowPlaying(350);
+    }, [isMenuOpen, onMenuToggle, fetchNowPlaying]);
 
     useEffect(() => {
         const nextToken = initSpotifyAuth();
