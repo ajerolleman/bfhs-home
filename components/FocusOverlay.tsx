@@ -554,7 +554,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
               >
                   {showCenteredTimer && (
                       <div
-                          className="absolute inset-x-0 top-[42%] -translate-y-1/2 z-[110] pointer-events-none transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] flex items-center justify-center"
+                          className={`absolute inset-x-0 ${isMixesOpen ? 'top-[38%]' : 'top-[42%]'} -translate-y-1/2 z-[110] pointer-events-none transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] flex items-center justify-center`}
                       >
                           <div className="text-center">
                               <div className={`font-mono font-bold text-white tracking-tight ${
@@ -580,11 +580,11 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                           <div className={`w-full max-w-3xl mx-auto ${isFocusMode ? 'pt-2' : ''}`}>
                               <div className={`flex flex-col items-center text-center ${isAIExpanded ? 'gap-3' : 'gap-4'}`}>
                                   {isFocusMode && (
-                                      <div className={`font-extrabold text-white tracking-tight leading-none ${
+                                      <div className={`font-extrabold text-white tracking-tight leading-none transition-transform duration-500 ${
                                           isAIExpanded
-                                              ? 'text-4xl md:text-5xl lg:text-6xl'
+                                              ? 'text-4xl md:text-5xl lg:text-6xl -translate-y-12 md:-translate-y-16'
                                               : isFocusMode
-                                              ? 'text-6xl md:text-7xl lg:text-8xl'
+                                              ? 'text-6xl md:text-7xl lg:text-8xl translate-y-0'
                                               : 'text-5xl md:text-6xl lg:text-7xl'
                                       }`}>
                                           {taskName || 'Focus Session'}
