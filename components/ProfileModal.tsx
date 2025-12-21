@@ -7,6 +7,7 @@ import {
     deleteMemoryNote, 
     getRecentMemoryNotes
 } from '../services/firebase';
+import { clearSpotifyAuth, getSpotifyLoginUrl } from '../services/authService';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -21,7 +22,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, prof
   const [name, setName] = useState(profile?.name || '');
   const [grade, setGrade] = useState(profile?.grade || '9th');
   const [allowMemory, setAllowMemory] = useState(profile?.allowMemory ?? true);
-  const [activeTab, setActiveTab] = useState<'profile' | 'schedule' | 'memory'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'schedule' | 'memory' | 'spotify'>('profile');
   const [notes, setNotes] = useState<MemoryNote[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -168,6 +169,12 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, prof
                         >
                             Memory
                         </button>
+                        <button 
+                             onClick={() => setActiveTab('spotify')}
+                             className={`flex-1 py-2 text-sm font-bold border-b-2 transition-colors ${activeTab === 'spotify' ? 'border-falcon-green text-falcon-green' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                        >
+                             Spotify
+                        </button>
                      </div>
 
                      {activeTab === 'profile' && (
@@ -264,6 +271,31 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, prof
                                     </div>
                                 </div>
                             </div>
+                         </div>
+                     )}
+
+                     {activeTab === 'spotify' && (
+                         <div className="space-y-4 max-w-md mx-auto text-center">
+                             <div className="text-sm text-gray-600">
+                                 Connect Spotify to enable focus mixes and playback controls.
+                             </div>
+                             <div className="flex flex-col gap-3">
+                                 <button
+                                     onClick={async () => {
+                                         const url = await getSpotifyLoginUrl();
+                                         window.location.href = url;
+                                     }}
+                                     className="w-full py-3 bg-[#1DB954] text-black font-bold rounded-xl hover:brightness-110 transition"
+                                 >
+                                     Connect Spotify
+                                 </button>
+                                 <button
+                                     onClick={() => clearSpotifyAuth()}
+                                     className="w-full py-3 border border-gray-300 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition"
+                                 >
+                                     Disconnect Spotify
+                                 </button>
+                             </div>
                          </div>
                      )}
 
