@@ -1,8 +1,10 @@
 const SPOTIFY_CLIENT_ID = '74092c1583494edcae059620291957ed';
 const SPOTIFY_AUTH_ENDPOINT = 'https://accounts.spotify.com/authorize';
+const SPOTIFY_TOKEN_ENDPOINT = 'https://accounts.spotify.com/api/token';
 
 const TOKEN_KEY = 'spotify_token';
 const EXPIRES_KEY = 'spotify_token_expires_at';
+const VERIFIER_KEY = 'spotify_code_verifier';
 
 const SPOTIFY_SCOPES = [
     'streaming',
@@ -12,21 +14,46 @@ const SPOTIFY_SCOPES = [
     'user-modify-playback-state'
 ];
 
+const base64UrlEncode = (buffer: ArrayBuffer) => {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    bytes.forEach((b) => { binary += String.fromCharCode(b); });
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+};
+
+const sha256 = async (input: string) => {
+    const data = new TextEncoder().encode(input);
+    return crypto.subtle.digest('SHA-256', data);
+};
+
+const generateCodeVerifier = () => {
+    const array = new Uint8Array(64);
+    crypto.getRandomValues(array);
+    return base64UrlEncode(array.buffer);
+};
+
+const generateCodeChallenge = async (verifier: string) => {
+    const hashed = await sha256(verifier);
+    return base64UrlEncode(hashed);
+};
+
 export const getSpotifyRedirectUri = () => {
-    const origin = window.location.origin;
-    if (origin.includes('localhost')) {
-        return 'http://localhost:5173/callback';
-    }
     return 'https://bfhs-home.onrender.com/callback';
 };
 
-export const getSpotifyLoginUrl = () => {
+export const getSpotifyLoginUrl = async () => {
     const redirectUri = getSpotifyRedirectUri();
+    const verifier = generateCodeVerifier();
+    const challenge = await generateCodeChallenge(verifier);
+    sessionStorage.setItem(VERIFIER_KEY, verifier);
+
     const params = new URLSearchParams({
         client_id: SPOTIFY_CLIENT_ID,
-        response_type: 'token',
+        response_type: 'code',
         redirect_uri: redirectUri,
         scope: SPOTIFY_SCOPES.join(' '),
+        code_challenge_method: 'S256',
+        code_challenge: challenge,
         show_dialog: 'true'
     });
 
@@ -69,7 +96,6 @@ export const initSpotifyAuth = () => {
         const params = new URLSearchParams(hash.replace('#', '?'));
         const token = params.get('access_token');
         const expiresIn = params.get('expires_in');
-
         if (token) {
             storeToken(token, expiresIn);
             clearHash();
@@ -77,4 +103,32 @@ export const initSpotifyAuth = () => {
         }
     }
     return getStoredSpotifyToken();
+};
+
+export const exchangeSpotifyCodeForToken = async (code: string) => {
+    const verifier = sessionStorage.getItem(VERIFIER_KEY);
+    if (!verifier) return null;
+
+    const body = new URLSearchParams({
+        client_id: SPOTIFY_CLIENT_ID,
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: getSpotifyRedirectUri(),
+        code_verifier: verifier
+    });
+
+    const response = await fetch(SPOTIFY_TOKEN_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString()
+    });
+
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (data.access_token) {
+        storeToken(data.access_token, data.expires_in);
+        sessionStorage.removeItem(VERIFIER_KEY);
+        return data.access_token as string;
+    }
+    return null;
 };

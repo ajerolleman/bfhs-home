@@ -15,13 +15,34 @@ import FocusOverlay from './components/FocusOverlay';
 import { subscribeToAuth, getUserProfile, getRecentMemoryNotes } from './services/firebase';
 import { sendMessageToGemini } from './services/geminiService';
 import { createNewSession, saveSession } from './services/chatHistoryService';
-import { initSpotifyAuth } from './services/authService';
+import { initSpotifyAuth, exchangeSpotifyCodeForToken } from './services/authService';
 import { UserProfile, ChatMessage, MemoryNote, ChatSession } from './types';
 
 const App: React.FC = () => {
   useEffect(() => {
-    const token = initSpotifyAuth();
-    if (token) console.log('Spotify connected');
+    const handleSpotify = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const error = params.get('error');
+
+      if (window.location.pathname.startsWith('/callback')) {
+        if (error) {
+          window.history.replaceState({}, document.title, '/');
+          return;
+        }
+        if (code) {
+          const token = await exchangeSpotifyCodeForToken(code);
+          window.history.replaceState({}, document.title, '/');
+          if (token) console.log('Spotify connected');
+          return;
+        }
+      }
+
+      const token = initSpotifyAuth();
+      if (token) console.log('Spotify connected');
+    };
+
+    handleSpotify();
   }, []);
 
   const [fullPageChatOpen, setFullPageChatOpen] = useState(false);

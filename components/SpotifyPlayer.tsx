@@ -23,8 +23,9 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris = DEFAULT_URIS, clas
                 <div className="text-xs font-bold uppercase tracking-widest text-falcon-gold">Spotify</div>
                 <p className="text-xs text-white/60 mt-2">Connect Spotify to add focus music.</p>
                 <button
-                    onClick={() => {
-                        window.location.href = getSpotifyLoginUrl();
+                    onClick={async () => {
+                        const url = await getSpotifyLoginUrl();
+                        window.location.href = url;
                     }}
                     className="mt-3 px-4 py-2 rounded-full bg-[#1DB954] text-black text-xs font-bold uppercase tracking-widest hover:brightness-110 transition"
                 >

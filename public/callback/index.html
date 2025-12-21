@@ -6,20 +6,41 @@
     <title>Spotify Callback</title>
     <script>
       (function () {
-        var hash = window.location.hash || '';
-        if (hash.indexOf('access_token') !== -1) {
-          var params = new URLSearchParams(hash.replace('#', '?'));
-          var token = params.get('access_token');
-          var expiresIn = params.get('expires_in');
-          if (token) {
-            localStorage.setItem('spotify_token', token);
-            if (expiresIn) {
-              var expiresAt = Date.now() + Number(expiresIn) * 1000;
-              localStorage.setItem('spotify_token_expires_at', String(expiresAt));
-            }
-          }
+        var params = new URLSearchParams(window.location.search);
+        var code = params.get('code');
+        var error = params.get('error');
+        var verifier = sessionStorage.getItem('spotify_code_verifier');
+        if (error || !code || !verifier) {
+          window.location.replace(window.location.origin + '/');
+          return;
         }
-        window.location.replace(window.location.origin + '/');
+
+        var body = new URLSearchParams({
+          client_id: '74092c1583494edcae059620291957ed',
+          grant_type: 'authorization_code',
+          code: code,
+          redirect_uri: 'https://bfhs-home.onrender.com/callback',
+          code_verifier: verifier
+        });
+
+        fetch('https://accounts.spotify.com/api/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body.toString()
+        })
+          .then(function (response) { return response.json(); })
+          .then(function (data) {
+            if (data && data.access_token) {
+              localStorage.setItem('spotify_token', data.access_token);
+              if (data.expires_in) {
+                var expiresAt = Date.now() + Number(data.expires_in) * 1000;
+                localStorage.setItem('spotify_token_expires_at', String(expiresAt));
+              }
+            }
+          })
+          .finally(function () {
+            window.location.replace(window.location.origin + '/');
+          });
       })();
     </script>
   </head>
