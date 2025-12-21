@@ -462,9 +462,25 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
 
       <div className="relative z-10 flex flex-col h-full animate-fade-in">
           {/* Focus Header */}
-          <div className={`fixed left-0 right-0 px-6 flex items-center justify-between bg-[linear-gradient(135deg,#12261E,#0F2019)] border-b border-white/10 z-[130] ${
+          <div className={`fixed left-0 right-0 px-6 flex items-center justify-between bg-[linear-gradient(135deg,#12261E,#0F2019)] border-b border-white/10 z-[130] relative overflow-hidden ${
               showHeaderTimer ? 'top-0 py-7 md:py-8' : 'top-0 py-4'
           }`}>
+              {spotifyArtworkUrl && (
+                  <>
+                      <div
+                          className="absolute inset-0 pointer-events-none"
+                          style={{
+                              backgroundImage: `url(${spotifyArtworkUrl})`,
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                              filter: 'blur(28px) brightness(1.25) saturate(1.25)',
+                              transform: 'scale(1.2)',
+                              opacity: 0.8
+                          }}
+                      />
+                      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(120deg,rgba(14,35,26,0.75),rgba(18,46,36,0.55),rgba(8,22,16,0.8))]" />
+                  </>
+              )}
               <div className="flex items-center gap-6">
                   <div className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center">
                       <img 
