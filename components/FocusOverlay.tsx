@@ -4,7 +4,7 @@ import { ChatSession, UserProfile } from '../types';
 import ChatPanel from './ChatPanel';
 import AIQuickBar from './AIQuickBar';
 import SpotifyPlayer from './SpotifyPlayer';
-import { BLOCK_SCHEDULE } from '../constants';
+import DayTicker from './DayTicker';
 
 interface FocusOverlayProps {
   isActive: boolean;
@@ -18,32 +18,6 @@ interface FocusOverlayProps {
 }
 
 type TimerState = 'setup' | 'running' | 'paused' | 'completed';
-
-// --- Helper: Schedule Logic for Next Period ---
-function getNextPeriodCountdown() {
-    const now = new Date();
-    const day = now.getDay();
-    // School hours logic (approximate 8am - 3:30pm M-F)
-    if (day === 0 || day === 6) return null; // Weekend
-    
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
-    const startOfDay = 8 * 60 + 5; // 8:05 AM
-    const endOfDay = 15 * 60 + 30; // 3:30 PM
-
-    if (nowMinutes < startOfDay || nowMinutes > endOfDay) return null;
-
-    // Find next period start
-    for (const block of BLOCK_SCHEDULE) {
-        const [startH, startM] = block.start.split(':').map(Number);
-        const startTotal = startH * 60 + startM;
-        
-        if (startTotal > nowMinutes) {
-            const diffMinutes = startTotal - nowMinutes;
-            return { name: block.name, minutes: diffMinutes };
-        }
-    }
-    return null;
-}
 
 // --- Sound Helper ---
 const playSound = (type: 'tick' | 'press' | 'chime' | 'soft-tick', ctx: AudioContext) => {
@@ -134,7 +108,6 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const [ambienceLevel, setAmbienceLevel] = useState(0.14);
   const [backgroundMode, setBackgroundMode] = useState<'calm' | 'forest' | 'dusk'>('calm');
   const [isBreathingCueEnabled, setIsBreathingCueEnabled] = useState(false);
-  const [nextPeriod, setNextPeriod] = useState<{ name: string, minutes: number } | null>(null);
   
   // UI State
   const [isParkingLotOpen, setIsParkingLotOpen] = useState(false);
@@ -272,15 +245,6 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       ambienceRef.current.gain.gain.setTargetAtTime(ambienceLevel, ctx.currentTime, 0.35);
   }, [ambienceLevel]);
 
-  // --- Check Next Period ---
-  useEffect(() => {
-      if (!isActive) return;
-      const checkNext = () => setNextPeriod(getNextPeriodCountdown());
-      checkNext();
-      const interval = setInterval(checkNext, 60000); // Check every min
-      return () => clearInterval(interval);
-  }, [isActive]);
-
   // --- Timer Loop ---
   useEffect(() => {
       if (state === 'running') {
@@ -313,8 +277,15 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       if (!isActive) return;
       const handleKeyDown = (e: KeyboardEvent) => {
           if (e.key === 'Escape') {
-              if (isParkingLotOpen) setIsParkingLotOpen(false);
-              else onExit();
+              e.preventDefault();
+              if (isParkingLotOpen) {
+                  setIsParkingLotOpen(false);
+                  return;
+              }
+              if (document.fullscreenElement) {
+                  document.exitFullscreen().catch(() => {});
+              }
+              onExit();
           }
           
           // Toggle Parking Lot
@@ -408,7 +379,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       <div className="relative z-10 flex flex-col h-full animate-fade-in">
           {/* Focus Header */}
           <div className="w-full px-6 py-4 flex items-center justify-between bg-[linear-gradient(135deg,#12261E,#0F2019)] border-b border-white/10 relative">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-6">
                   <div className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center">
                       <img 
                           src="https://static.wixstatic.com/media/e6bdc9_9e876e6d3ee44a9e860f83e8afc9774a~mv2.png/v1/fill/w_208,h_200,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Primary%20Logo%20in%20white%20no%20TEXT.png"
@@ -420,16 +391,17 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                       <div className="text-[10px] uppercase font-bold tracking-widest text-falcon-gold">BFHS Internal</div>
                       <div className="text-sm font-bold">Focus Studio</div>
                   </div>
+                  <div className="hidden sm:block">
+                      <DayTicker userProfile={userProfile} />
+                  </div>
+                  <div className="sm:hidden">
+                      <DayTicker userProfile={userProfile} />
+                  </div>
               </div>
 
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-                  <div className="text-xs font-bold uppercase tracking-[0.35em] text-white/80">Focus Session</div>
-              </div>
-
-              {nextPeriod && (state === 'running' || state === 'setup') && (
-                  <div className="hidden md:flex flex-col items-center text-xs text-white/70">
-                      <span className="text-[10px] uppercase font-bold tracking-widest text-falcon-gold">Next Period</span>
-                      <span className="font-mono">{nextPeriod.name} in {nextPeriod.minutes}m</span>
+              {state === 'setup' && (
+                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+                      <div className="text-xs font-bold uppercase tracking-[0.35em] text-white/80">Focus Session</div>
                   </div>
               )}
 
@@ -460,10 +432,10 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
           </div>
 
           {/* Scrollable Body */}
-          <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth pb-56">
+          <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth pb-56 flex flex-col">
               <div ref={topRef} className="h-0 w-full" />
               {/* Main Content */}
-              <div className="flex flex-col items-center px-4 md:px-8 pt-6 pb-10">
+              <div className={`w-full flex flex-col items-center px-4 md:px-8 pb-10 min-h-[calc(100vh-220px)] transform-gpu transition-transform duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${state === 'setup' ? 'justify-center pt-6' : 'justify-start pt-8 md:pt-10'} ${isAIExpanded ? 'scale-[0.97] -translate-y-4' : 'scale-100 translate-y-0'}`}>
                   <div className="w-full max-w-6xl">
                       <div className="w-full max-w-3xl mx-auto">
                           <div className="flex flex-col items-center gap-4 text-center">
@@ -481,7 +453,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                       />
                                   </div>
                               ) : (
-                                  <div className="text-3xl md:text-4xl font-bold text-white tracking-tight">
+                                  <div className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-none">
                                       {taskName || 'Focus Session'}
                                   </div>
                               )}
@@ -554,9 +526,15 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                           )}
                           
                           {(state === 'setup' || state === 'running' || state === 'paused') && (
-                              <div className="w-full max-w-xl mt-4">
+                              <div className={`w-full max-w-3xl mt-6 transform-gpu transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] origin-top ${isAIExpanded ? 'scale-[0.72] -translate-y-10 opacity-90' : 'scale-100 translate-y-0'}`}>
                                   <div className="text-center">
-                                      <div className={`font-mono font-bold text-white tracking-tighter drop-shadow-md transition-all duration-300 ${state === 'setup' ? 'text-6xl' : 'text-5xl'}`}>
+                                      <div className={`font-mono font-bold text-white tracking-tighter drop-shadow-md transition-all duration-300 ${
+                                          isAIExpanded
+                                              ? 'text-5xl md:text-6xl'
+                                              : state === 'setup'
+                                              ? 'text-8xl md:text-9xl'
+                                              : 'text-7xl md:text-8xl'
+                                      }`}>
                                           {formatTime(state === 'setup' ? setupTotalSeconds : secondsRemaining)}
                                       </div>
                                       <div className="text-[10px] text-gray-400 uppercase tracking-[0.2em] mt-2">
@@ -574,7 +552,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                                   step="5"
                                                   value={setupTotalSeconds}
                                                   onChange={(e) => setMinutes(Number(e.target.value) / 60)}
-                                                  className="w-full h-3 md:h-4 accent-falcon-gold"
+                                                  className={`w-full accent-falcon-gold ${isAIExpanded ? 'h-3 md:h-4' : 'h-6 md:h-7'}`}
                                               />
                                               <div className="mt-2 flex justify-between text-[10px] text-white/50 uppercase tracking-[0.2em]">
                                                   <span>1:00</span>
@@ -582,7 +560,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                               </div>
                                           </div>
                                       ) : (
-                                          <div className="relative h-4 md:h-5 rounded-full bg-white/15 overflow-hidden">
+                                          <div className={`relative rounded-full bg-white/15 overflow-hidden ${isAIExpanded ? 'h-3 md:h-4' : 'h-8 md:h-10'}`}>
                                               <div
                                                   className="absolute inset-y-0 left-0 bg-emerald-400/90 transition-[width] duration-500 ease-out"
                                                   style={{ width: `${Math.max(0, (1 - runningProgress)) * 100}%` }}
