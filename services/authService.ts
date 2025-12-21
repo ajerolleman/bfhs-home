@@ -1,6 +1,6 @@
 const SPOTIFY_CLIENT_ID = '74092c1583494edcae059620291957ed';
-const TOKEN_KEY = 'spotify_access_token';
-const EXPIRES_KEY = 'spotify_access_token_expires_at';
+const TOKEN_KEY = 'spotify_token';
+const EXPIRES_KEY = 'spotify_token_expires_at';
 const SPOTIFY_SCOPES = [
     'streaming',
     'user-read-email',
@@ -14,10 +14,7 @@ export const getSpotifyRedirectUri = () => {
     if (origin.includes('localhost')) {
         return 'http://localhost:5173/callback';
     }
-    if (origin.includes('bfhs-home.onrender.com')) {
-        return 'https://bfhs-home.onrender.com/callback';
-    }
-    return `${origin}/callback`;
+    return 'https://bfhs-home.onrender.com/callback';
 };
 
 export const getSpotifyLoginUrl = () => {
@@ -26,8 +23,7 @@ export const getSpotifyLoginUrl = () => {
         client_id: SPOTIFY_CLIENT_ID,
         response_type: 'token',
         redirect_uri: redirectUri,
-        scope: SPOTIFY_SCOPES.join(' '),
-        show_dialog: 'true'
+        scope: SPOTIFY_SCOPES.join(' ')
     });
     return `https://accounts.spotify.com/authorize?${params.toString()}`;
 };
@@ -63,8 +59,8 @@ export const getStoredSpotifyToken = () => {
 
 export const initSpotifyAuth = () => {
     const hash = window.location.hash;
-    if (hash && hash.includes('access_token=')) {
-        const params = new URLSearchParams(hash.replace(/^#/, ''));
+    if (hash && hash.includes('access_token')) {
+        const params = new URLSearchParams(hash.replace('#', '?'));
         const token = params.get('access_token');
         const expiresIn = params.get('expires_in');
         if (token) {

@@ -24,10 +24,8 @@ const App: React.FC = () => {
     if (hash && hash.includes('access_token')) {
       const token = new URLSearchParams(hash.replace('#', '?')).get('access_token');
       if (token) {
-        console.log('✅ Spotify Token Found:', token);
         localStorage.setItem('spotify_token', token);
         window.location.hash = '';
-        window.location.reload();
       }
     }
   }, []);
