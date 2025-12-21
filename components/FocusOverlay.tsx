@@ -451,15 +451,15 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
               backgroundImage: spotifyArtworkUrl ? `url(${spotifyArtworkUrl})` : 'none',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
-              opacity: spotifyArtworkUrl ? 0.98 : 0,
-              filter: 'blur(22px) brightness(1.05) saturate(1.3)',
-              transform: 'scale(1.12)'
+              opacity: spotifyArtworkUrl ? 0.92 : 0,
+              filter: 'blur(28px) brightness(0.92) saturate(1.2)',
+              transform: 'scale(1.14)'
           }}
       />
       {spotifyArtworkUrl && (
           <>
-              <div className="fixed inset-0 pointer-events-none bg-[linear-gradient(120deg,rgba(8,26,18,0.35),rgba(12,30,22,0.28),rgba(6,18,14,0.38))]" />
-              <div className="fixed inset-0 pointer-events-none bg-black/10" />
+              <div className="fixed inset-0 pointer-events-none bg-[linear-gradient(120deg,rgba(8,26,18,0.5),rgba(12,30,22,0.44),rgba(6,18,14,0.52))]" />
+              <div className="fixed inset-0 pointer-events-none bg-black/20" />
           </>
       )}
       <div className="fixed inset-0 bg-noise opacity-[0.05] pointer-events-none mix-blend-overlay"></div>
