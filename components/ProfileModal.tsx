@@ -14,9 +14,10 @@ interface ProfileModalProps {
   user: any; // Firebase User
   profile: UserProfile | null;
   onProfileUpdate: (p: UserProfile) => void;
+  authMessage?: string | null;
 }
 
-const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, profile, onProfileUpdate }) => {
+const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, profile, onProfileUpdate, authMessage }) => {
   const [name, setName] = useState(profile?.name || '');
   const [grade, setGrade] = useState(profile?.grade || '9th');
   const [allowMemory, setAllowMemory] = useState(profile?.allowMemory ?? true);
@@ -120,9 +121,15 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, prof
                     <div>
                         <h3 className="text-xl font-bold text-gray-800 mb-2">Login Required</h3>
                         <p className="text-gray-600 text-sm">
-                            Please sign in with your Google account to access the BFHS Student Portal.
+                            Please sign in with your BFHS Google account (@bfhsla.org) to access the student portal.
                         </p>
                     </div>
+
+                    {authMessage && (
+                        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+                            {authMessage}
+                        </div>
+                    )}
                     
                     <button 
                         onClick={() => signInWithGoogle()}

@@ -41,6 +41,10 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+  hd: "bfhsla.org",
+  prompt: "select_account"
+});
 
 // --- Auth Functions ---
 

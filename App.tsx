@@ -12,7 +12,7 @@ import ProfileModal from './components/ProfileModal';
 import ChatOverlay from './components/ChatOverlay';
 import ChatPanel from './components/ChatPanel';
 import FocusOverlay from './components/FocusOverlay';
-import { subscribeToAuth, getUserProfile, getRecentMemoryNotes } from './services/firebase';
+import { subscribeToAuth, getUserProfile, getRecentMemoryNotes, logout } from './services/firebase';
 import { sendMessageToGemini } from './services/geminiService';
 import { createNewSession, saveSession } from './services/chatHistoryService';
 import { initSpotifyAuth, exchangeSpotifyCodeForToken } from './services/authService';
@@ -53,6 +53,8 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
 
@@ -88,20 +90,31 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const unsubscribe = subscribeToAuth(async (user) => {
+      setAuthChecked(true);
+      const email = user?.email?.toLowerCase() || '';
+      if (user && !email.endsWith('@bfhsla.org')) {
+        setAuthError('Please sign in with your @bfhsla.org email address to access BFHS Internal.');
+        setCurrentUser(null);
+        setUserProfile(null);
+        setIsProfileModalOpen(true);
+        await logout();
+        return;
+      }
       setCurrentUser(user);
       if (user) {
+        setAuthError(null);
         const profile = await getUserProfile(user.uid);
-        if (profile) setUserProfile(profile);
+        if (profile) {
+          setUserProfile(profile);
+          setIsProfileModalOpen(false);
+        }
         else {
           setUserProfile(null);
           setIsProfileModalOpen(true);
         }
       } else {
         setUserProfile(null);
-        if (!localStorage.getItem('seen_bfhs_help_welcome')) {
-            setIsProfileModalOpen(true);
-            localStorage.setItem('seen_bfhs_help_welcome', 'true');
-        }
+        setIsProfileModalOpen(true);
       }
     });
     return () => unsubscribe();
@@ -140,6 +153,31 @@ const App: React.FC = () => {
         saveSession(finalSession);
       } finally { setIsSending(false); }
   };
+
+  const isAuthorized = Boolean(currentUser?.email && currentUser.email.toLowerCase().endsWith('@bfhsla.org'));
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-[#0B1310] text-white flex items-center justify-center text-sm">
+        Checking access...
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen bg-[#0B1310] text-white">
+        <ProfileModal
+          isOpen={true}
+          onClose={() => {}}
+          user={null}
+          profile={null}
+          onProfileUpdate={setUserProfile}
+          authMessage={authError}
+        />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -195,7 +233,7 @@ const App: React.FC = () => {
                 <ChatPanel messages={currentSession?.messages || []} isLoading={isSending} userProfile={userProfile} onSignInRequest={() => setIsProfileModalOpen(true)} />
             </ChatOverlay>
 
-            <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} user={currentUser} profile={userProfile} onProfileUpdate={setUserProfile} />
+            <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} user={currentUser} profile={userProfile} onProfileUpdate={setUserProfile} authMessage={authError} />
         </div>
       </div>
     </div>
