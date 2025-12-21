@@ -24,13 +24,13 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
     const [activeUris, setActiveUris] = useState<string[] | undefined>(uris && uris.length ? uris : undefined);
     const [selectedLabel, setSelectedLabel] = useState('Continue Listening');
     const [artworkUrl, setArtworkUrl] = useState<string | null>(null);
-    const [trackSummary, setTrackSummary] = useState<string | null>(null);
     const [userPlaylists, setUserPlaylists] = useState<{ id: string; name: string; uri: string }[]>([]);
     const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
     const [playlistError, setPlaylistError] = useState<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const artworkRef = useRef<string | null>(null);
-    const trackSummaryRef = useRef<string | null>(null);
+    const fetchAbortRef = useRef<AbortController | null>(null);
+    const lastFetchRef = useRef(0);
 
     useEffect(() => {
         if (uris && uris.length > 0) {
@@ -75,34 +75,15 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
         }
     }, [onArtworkChange]);
 
-    const updateTrackSummary = useCallback((track: any) => {
-        const name = track?.name ? String(track.name) : '';
-        const artists = Array.isArray(track?.artists)
-            ? track.artists.map((artist: any) => artist?.name).filter(Boolean)
-            : [];
-        const summary = name && artists.length ? `${name} — ${artists.join(', ')}` : name || null;
-        if (summary && summary !== trackSummaryRef.current) {
-            trackSummaryRef.current = summary;
-            setTrackSummary(summary);
-            try {
-                localStorage.setItem('spotify_last_track_summary', summary);
-            } catch (e) {
-                // Ignore storage failures.
-            }
-        }
-    }, []);
-
     const handlePlayback = useCallback((state: any) => {
-        const track = state?.track;
-        const images = track?.album?.images;
+        const images = state?.track?.album?.images;
         const nextUrl =
             images?.[0]?.url ||
             images?.[1]?.url ||
             images?.[2]?.url ||
             null;
         updateArtwork(nextUrl);
-        updateTrackSummary(track);
-    }, [updateArtwork, updateTrackSummary]);
+    }, [updateArtwork]);
 
     useEffect(() => {
         try {
@@ -113,34 +94,31 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
         }
     }, [updateArtwork]);
 
-    useEffect(() => {
-        try {
-            const cached = localStorage.getItem('spotify_last_track_summary');
-            if (cached) setTrackSummary(cached);
-        } catch (e) {
-            // Ignore storage failures.
-        }
-    }, []);
-
-    const fetchNowPlaying = useCallback((delay = 0) => {
+    const fetchNowPlaying = useCallback((delay = 0, immediate = false) => {
         if (!token) return;
         const run = () => {
+            const now = Date.now();
+            if (!immediate && now - lastFetchRef.current < 2500) return;
+            lastFetchRef.current = now;
+            fetchAbortRef.current?.abort();
+            const controller = new AbortController();
+            fetchAbortRef.current = controller;
             fetch('https://api.spotify.com/v1/me/player', {
-                headers: { Authorization: `Bearer ${token}` }
+                headers: { Authorization: `Bearer ${token}` },
+                signal: controller.signal
             })
                 .then((res) => (res.status === 204 ? null : res.json()))
                 .then((data) => {
-                    const track = data?.item;
-                    const images = track?.album?.images;
+                    const images = data?.item?.album?.images;
                     const nextUrl =
                         images?.[0]?.url ||
                         images?.[1]?.url ||
                         images?.[2]?.url ||
                         null;
                     updateArtwork(nextUrl);
-                    updateTrackSummary(track);
                 })
-                .catch(() => {
+                .catch((error) => {
+                    if (error?.name === 'AbortError') return;
                     // Ignore transient errors; keep cached art.
                 });
         };
@@ -149,24 +127,24 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
         } else {
             run();
         }
-    }, [token, updateArtwork, updateTrackSummary]);
+    }, [token, updateArtwork]);
 
     const handleMixSelect = useCallback((nextId: string | null, label: string, nextUris?: string[]) => {
         setSelectedPlaylistId(nextId);
         setActiveUris(nextUris && nextUris.length ? nextUris : undefined);
         setSelectedLabel(label);
-        fetchNowPlaying(650);
+        fetchNowPlaying(250, true);
     }, [fetchNowPlaying]);
 
     useEffect(() => {
         onMenuToggle?.(isMenuOpen);
-        if (isMenuOpen) fetchNowPlaying(350);
+        if (isMenuOpen) fetchNowPlaying(0, true);
     }, [isMenuOpen, onMenuToggle, fetchNowPlaying]);
 
     useEffect(() => {
         if (!token) return;
-        fetchNowPlaying();
-        const interval = window.setInterval(() => fetchNowPlaying(), 15000);
+        fetchNowPlaying(0, true);
+        const interval = window.setInterval(() => fetchNowPlaying(), 8000);
         return () => window.clearInterval(interval);
     }, [token, fetchNowPlaying]);
 
@@ -179,8 +157,12 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
             const button = target?.closest('button');
             if (!button) return;
             const label = button.getAttribute('aria-label')?.toLowerCase() || '';
-            if (label.includes('next') || label.includes('previous') || label.includes('skip') || label.includes('play') || label.includes('pause')) {
-                fetchNowPlaying(350);
+            if (label.includes('play') || label.includes('pause')) {
+                fetchNowPlaying(120, true);
+                return;
+            }
+            if (label.includes('next') || label.includes('previous') || label.includes('skip')) {
+                fetchNowPlaying(200, true);
             }
         };
         container.addEventListener('click', handleClick, true);
@@ -361,18 +343,11 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
                                     />
                                 </div>
                             )}
-                        <div className="flex-1 min-w-0">
-                            {trackSummary && (
-                                <div className={`mb-2 text-sm font-semibold truncate ${
-                                    isLightTone ? 'text-gray-900' : 'text-white'
-                                }`}>
-                                    {trackSummary}
-                                </div>
-                            )}
-                            <SpotifyWebPlayback
-                                token={token}
-                                uris={activeUris}
-                                callback={handlePlayback}
+                                <div className="flex-1 min-w-0">
+                                    <SpotifyWebPlayback
+                                        token={token}
+                                        uris={activeUris}
+                                        callback={handlePlayback}
                                         layout="compact"
                                         hideCoverArt={true}
                                         hideAttribution={true}
