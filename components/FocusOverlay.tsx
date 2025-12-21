@@ -412,7 +412,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                   </div>
                   <div>
                       <div className="text-[10px] uppercase font-bold tracking-widest text-falcon-gold">BFHS Internal</div>
-                      <div className="text-sm font-bold">Focus clean</div>
+                      <div className="text-sm font-bold">Focus</div>
                   </div>
                   <div className="hidden sm:block">
                       <DayTicker userProfile={userProfile} />

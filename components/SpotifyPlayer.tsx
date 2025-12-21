@@ -6,8 +6,6 @@ interface SpotifyPlayerProps {
     uris?: string[];
     className?: string;
 }
-
-const DEFAULT_URIS = ['spotify:playlist:37i9dQZF1DWZeKCadgRdKQ'];
 const PLAYLISTS = [
     { id: 'deep-focus', label: 'Deep Focus', uris: ['spotify:playlist:37i9dQZF1DWZeKCadgRdKQ'] },
     { id: 'lofi', label: 'Lo-Fi Beats', uris: ['spotify:playlist:37i9dQZF1DWWQRwui0ExPn'] },
@@ -15,19 +13,27 @@ const PLAYLISTS = [
     { id: 'jazz', label: 'Jazz Vibes', uris: ['spotify:playlist:37i9dQZF1DX4wta20PHgwo'] }
 ];
 
-const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris = DEFAULT_URIS, className }) => {
+const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className }) => {
     const [token, setToken] = useState<string | null>(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [selectedPlaylistId, setSelectedPlaylistId] = useState(PLAYLISTS[0].id);
-    const [activeUris, setActiveUris] = useState<string[]>(uris);
-    const [selectedLabel, setSelectedLabel] = useState(PLAYLISTS[0].label);
+    const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
+    const [activeUris, setActiveUris] = useState<string[] | undefined>(uris && uris.length ? uris : undefined);
+    const [selectedLabel, setSelectedLabel] = useState('Continue Listening');
     const [userPlaylists, setUserPlaylists] = useState<{ id: string; name: string; uri: string }[]>([]);
     const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
     const [playlistError, setPlaylistError] = useState<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        setActiveUris(uris);
+        if (uris && uris.length > 0) {
+            setActiveUris(uris);
+            setSelectedPlaylistId('default');
+            setSelectedLabel('Selected Mix');
+        } else {
+            setActiveUris(undefined);
+            setSelectedPlaylistId(null);
+            setSelectedLabel('Continue Listening');
+        }
     }, [uris]);
 
     useEffect(() => {
@@ -167,7 +173,6 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris = DEFAULT_URIS, clas
                     <SpotifyWebPlayback
                         token={token}
                         uris={activeUris}
-                        play={true}
                         layout="compact"
                         hideCoverArt={true}
                         hideAttribution={true}

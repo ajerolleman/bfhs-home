@@ -58,14 +58,14 @@ const Header: React.FC<HeaderProps> = ({
         
         {/* Right: Controls */}
         <div className="flex items-center space-x-2 shrink-0">
-            {/* Focus clean Button */}
+            {/* Focus Button */}
             {onToggleFocus && !compact && (
                 <button
                     onClick={onToggleFocus}
                     className="group relative flex items-center gap-2 px-4 py-1.5 rounded-full bg-[linear-gradient(120deg,#1B3B2F,#214639)] border border-falcon-gold/30 text-falcon-gold shadow-[0_8px_24px_-16px_rgba(0,0,0,0.8)] hover:brightness-110 transition-all duration-300 overflow-hidden"
-                    title="Open Focus clean"
+                    title="Open Focus"
                 >
-                    <span className="text-xs font-black uppercase tracking-[0.2em]">Focus clean</span>
+                    <span className="text-xs font-black uppercase tracking-[0.2em]">Focus</span>
                     <span className="w-1.5 h-1.5 rounded-full bg-falcon-gold shadow-[0_0_10px_rgba(234,179,8,0.7)] animate-pulse"></span>
                 </button>
             )}
