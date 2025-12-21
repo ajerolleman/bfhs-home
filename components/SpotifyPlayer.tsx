@@ -27,10 +27,14 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
     const [userPlaylists, setUserPlaylists] = useState<{ id: string; name: string; uri: string }[]>([]);
     const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
     const [playlistError, setPlaylistError] = useState<string | null>(null);
+    const [playerKey, setPlayerKey] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
     const artworkRef = useRef<string | null>(null);
     const fetchAbortRef = useRef<AbortController | null>(null);
     const lastFetchRef = useRef(0);
+    const lastPlaybackRef = useRef(0);
+    const retryCountRef = useRef(0);
+    const loadStartRef = useRef(0);
 
     useEffect(() => {
         if (uris && uris.length > 0) {
@@ -83,6 +87,10 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
             images?.[2]?.url ||
             null;
         updateArtwork(nextUrl);
+        if (state?.track?.uri || state?.track?.name) {
+            lastPlaybackRef.current = Date.now();
+            retryCountRef.current = 0;
+        }
     }, [updateArtwork]);
 
     useEffect(() => {
@@ -145,6 +153,22 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
         if (!token) return;
         fetchNowPlaying(0, true);
         const interval = window.setInterval(() => fetchNowPlaying(), 8000);
+        return () => window.clearInterval(interval);
+    }, [token, fetchNowPlaying]);
+
+    useEffect(() => {
+        if (!token) return;
+        loadStartRef.current = Date.now();
+        const interval = window.setInterval(() => {
+            const now = Date.now();
+            const last = lastPlaybackRef.current || loadStartRef.current;
+            if (now - last < 12000) return;
+            if (retryCountRef.current >= 3) return;
+            retryCountRef.current += 1;
+            loadStartRef.current = now;
+            setPlayerKey((prev) => prev + 1);
+            fetchNowPlaying(0, true);
+        }, 4000);
         return () => window.clearInterval(interval);
     }, [token, fetchNowPlaying]);
 
@@ -345,6 +369,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
                             )}
                                 <div className="flex-1 min-w-0">
                                     <SpotifyWebPlayback
+                                        key={`spotify-player-${playerKey}`}
                                         token={token}
                                         uris={activeUris}
                                         callback={handlePlayback}

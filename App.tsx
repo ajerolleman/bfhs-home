@@ -64,7 +64,7 @@ const App: React.FC = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
   const [isSpotifyPlaying, setIsSpotifyPlaying] = useState(false);
-  const [isHomeSpotifyVisible, setIsHomeSpotifyVisible] = useState(true);
+  const [isHomeSpotifyVisible, setIsHomeSpotifyVisible] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
 
