@@ -53,11 +53,6 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
     }, [isMenuOpen]);
 
     useEffect(() => {
-        onMenuToggle?.(isMenuOpen);
-        if (isMenuOpen) fetchNowPlaying(350);
-    }, [isMenuOpen, onMenuToggle, fetchNowPlaying]);
-
-    useEffect(() => {
         const nextToken = initSpotifyAuth();
         if (nextToken) setToken(nextToken);
     }, []);
@@ -121,6 +116,11 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
             run();
         }
     }, [token, updateArtwork]);
+
+    useEffect(() => {
+        onMenuToggle?.(isMenuOpen);
+        if (isMenuOpen) fetchNowPlaying(350);
+    }, [isMenuOpen, onMenuToggle, fetchNowPlaying]);
 
     useEffect(() => {
         if (!token) return;
