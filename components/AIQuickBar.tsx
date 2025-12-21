@@ -9,9 +9,11 @@ interface AIQuickBarProps {
     onBarFocus?: () => void;
     docked?: boolean;
     hideChips?: boolean;
+    searchMode?: 'bfhs-only' | 'bfhs-google';
+    placeholder?: string;
 }
 
-const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpenChat, onBarFocus, docked, hideChips }) => {
+const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpenChat, onBarFocus, docked, hideChips, searchMode = 'bfhs-google', placeholder }) => {
     const [query, setQuery] = useState('');
     const [isFocused, setIsFocused] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -48,15 +50,17 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
             ),
             shortcut: 'return'
         },
-        { 
-            id: 'google', 
-            label: 'Google', 
+        ...(searchMode === 'bfhs-google' ? [{
+            id: 'google',
+            label: 'Google',
             icon: (
                 <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/></svg>
             ),
-            shortcut: '' 
-        }
+            shortcut: ''
+        }] : [])
     ];
+    const showSelector = showDropdown && options.length > 1;
+    const inputPlaceholder = placeholder ?? (searchMode === 'bfhs-only' ? 'Message BFHS Help...' : 'Message BFHS Help or Google...');
 
     // Auto-resize Textarea
     useEffect(() => {
@@ -212,7 +216,7 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
                         bg-[#1B3B2F] text-[#E3E3E3] 
                         border border-white/10 shadow-2xl
                         transition-[border-radius, box-shadow, height, padding] duration-160 ease-out
-                        ${showDropdown ? 'rounded-t-[32px] rounded-b-none' : 'rounded-[32px]'}
+                        ${showSelector ? 'rounded-t-[32px] rounded-b-none' : 'rounded-[32px]'}
                         ${isFocused ? 'ring-1 ring-white/10' : 'hover:shadow-2xl'}
                     `}
                     style={{ transform: 'translateZ(0)' }}
@@ -296,7 +300,7 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
                             }}
                             onKeyDown={handleKeyDown}
                             onPaste={handlePaste}
-                            placeholder="Message BFHS Help or Google..."
+                            placeholder={inputPlaceholder}
                             className={`
                                 relative z-10 flex-1 bg-transparent border-none outline-none 
                                 text-[#E3E3E3] placeholder-white/50 font-normal min-w-0 
@@ -356,7 +360,7 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
                 </div>
 
                 {/* Dropdown Menu */}
-                {showDropdown && (
+                {showSelector && (
                     <div className="w-full bg-[#1B3B2F] rounded-b-[32px] shadow-2xl overflow-hidden py-3 border-t border-white/5 animate-fade-in z-10 relative">
                         <div className="absolute inset-0 bg-noise opacity-[0.07] pointer-events-none mix-blend-overlay"></div>
                         {options.map((option, idx) => (

@@ -6,6 +6,7 @@ interface SpotifyPlayerProps {
     uris?: string[];
     className?: string;
     onArtworkChange?: (url: string | null) => void;
+    onMenuToggle?: (open: boolean) => void;
 }
 const PLAYLISTS = [
     { id: 'deep-focus', label: 'Deep Focus', uris: ['spotify:playlist:37i9dQZF1DWZeKCadgRdKQ'] },
@@ -14,7 +15,7 @@ const PLAYLISTS = [
     { id: 'jazz', label: 'Jazz Vibes', uris: ['spotify:playlist:37i9dQZF1DX4wta20PHgwo'] }
 ];
 
-const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtworkChange }) => {
+const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtworkChange, onMenuToggle }) => {
     const [token, setToken] = useState<string | null>(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
@@ -50,6 +51,10 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
         document.addEventListener('mousedown', handleOutside);
         return () => document.removeEventListener('mousedown', handleOutside);
     }, [isMenuOpen]);
+
+    useEffect(() => {
+        onMenuToggle?.(isMenuOpen);
+    }, [isMenuOpen, onMenuToggle]);
 
     useEffect(() => {
         const nextToken = initSpotifyAuth();

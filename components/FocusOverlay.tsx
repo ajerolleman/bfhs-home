@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { ChatSession, UserProfile } from '../types';
 import ChatPanel from './ChatPanel';
 import AIQuickBar from './AIQuickBar';
@@ -108,7 +108,9 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const [isParkingLotOpen, setIsParkingLotOpen] = useState(false);
   const [parkingInput, setParkingInput] = useState('');
   const [isAIExpanded, setIsAIExpanded] = useState(false);
+  const [isMixesOpen, setIsMixesOpen] = useState(false);
   const [spotifyArtworkUrl, setSpotifyArtworkUrl] = useState<string | null>(null);
+  const [aiDockHeight, setAiDockHeight] = useState(240);
   const hasConversation = (currentSession?.messages?.length ?? 0) > 0;
   
   // Refs
@@ -123,6 +125,11 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const aiDockRef = useRef<HTMLDivElement>(null);
   const chatPanelRef = useRef<HTMLDivElement>(null);
   const lastSliderTickRef = useRef(0);
+  const updateAiDockHeight = useCallback(() => {
+      if (!aiDockRef.current) return;
+      const nextHeight = Math.ceil(aiDockRef.current.getBoundingClientRect().height);
+      setAiDockHeight(nextHeight);
+  }, []);
 
   const stopAmbience = useCallback(() => {
       const nodes = ambienceRef.current;
@@ -219,6 +226,21 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       document.addEventListener('mousedown', handleOutside);
       return () => document.removeEventListener('mousedown', handleOutside);
   }, [isAIExpanded, handleCollapseAI]);
+
+  useLayoutEffect(() => {
+      updateAiDockHeight();
+  }, [updateAiDockHeight, isAIExpanded, isMixesOpen]);
+
+  useEffect(() => {
+      if (!aiDockRef.current) return;
+      if (typeof ResizeObserver === 'undefined') {
+          window.addEventListener('resize', updateAiDockHeight);
+          return () => window.removeEventListener('resize', updateAiDockHeight);
+      }
+      const observer = new ResizeObserver(() => updateAiDockHeight());
+      observer.observe(aiDockRef.current);
+      return () => observer.disconnect();
+  }, [updateAiDockHeight]);
 
   const triggerSound = (type: SoundType, volumeScale = 1) => {
       if (isSoundEnabled && audioCtxRef.current) {
@@ -471,10 +493,15 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
           </div>
 
           {/* Scrollable Body */}
-          <div className={`flex-1 min-h-0 overflow-hidden flex flex-col transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${isAIExpanded ? 'pb-[48vh]' : 'pb-[28rem]'}`}>
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
               <div ref={topRef} className="h-0 w-full" />
               {/* Main Content */}
-              <div className={`w-full flex flex-col items-center px-4 md:px-8 pb-10 min-h-[calc(100vh-220px)] transform-gpu transition-transform duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] justify-start pt-4 md:pt-6 ${isAIExpanded ? 'scale-[0.97] -translate-y-4' : 'scale-100 translate-y-0'}`}>
+              <div
+                  className={`w-full flex flex-col items-center px-4 md:px-8 flex-1 min-h-0 transform-gpu transition-[padding-bottom,transform] duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] justify-start pt-4 md:pt-6 ${
+                      isAIExpanded ? 'scale-[0.985]' : 'scale-100'
+                  }`}
+                  style={{ paddingBottom: aiDockHeight ? aiDockHeight + 16 : undefined }}
+              >
                   <div className="w-full max-w-6xl flex flex-col flex-1">
                       {state === 'setup' && (
                           <div className="w-full">
@@ -501,11 +528,15 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                           </div>
                       )}
 
-                      <div className="flex-1 flex items-center justify-center">
+                      <div className={`flex-1 flex ${isAIExpanded ? 'items-end' : 'items-center'} justify-center transform-gpu transition-transform duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)]`}>
                           <div className="w-full max-w-3xl mx-auto">
-                              <div className="flex flex-col items-center gap-4 text-center">
+                              <div className={`flex flex-col items-center text-center ${isAIExpanded ? 'gap-3' : 'gap-4'}`}>
                                   {state !== 'setup' && (
-                                      <div className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-none">
+                                      <div className={`font-extrabold text-white tracking-tight leading-none ${
+                                          isAIExpanded
+                                              ? 'text-4xl md:text-5xl lg:text-6xl'
+                                              : 'text-5xl md:text-6xl lg:text-7xl'
+                                      }`}>
                                           {taskName || 'Focus Session'}
                                       </div>
                                   )}
@@ -545,83 +576,178 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                       </div>
                                   )}
 
-                                  <div className="flex flex-wrap items-center justify-center gap-2">
-                                      <button
-                                          onClick={() => {
-                                              const next = !isCalmMode;
-                                              setIsCalmMode(next);
-                                              triggerSound(next ? 'enable' : 'disable');
-                                          }}
-                                          className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-transform active:scale-95 ${isCalmMode ? 'bg-white/10 border-white/20 text-white' : 'border-gray-700 text-gray-400'}`}
-                                      >
-                                          Calm Mode
-                                      </button>
-                                      <button
-                                          onClick={() => {
-                                              const next = !isBreathingCueEnabled;
-                                              setIsBreathingCueEnabled(next);
-                                              triggerSound(next ? 'enable' : 'disable');
-                                          }}
-                                          className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-transform active:scale-95 ${isBreathingCueEnabled ? 'bg-white/10 border-white/20 text-white' : 'border-gray-700 text-gray-400'}`}
-                                      >
-                                          Breathing Cue
-                                      </button>
-                                  </div>
+                                  {state === 'setup' ? (
+                                      <div className="flex-1 w-full flex flex-col items-center justify-center">
+                                          <div className="flex flex-wrap items-center justify-center gap-2">
+                                              <button
+                                                  onClick={() => {
+                                                      const next = !isCalmMode;
+                                                      setIsCalmMode(next);
+                                                      triggerSound(next ? 'enable' : 'disable');
+                                                  }}
+                                                  className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-transform active:scale-95 ${isCalmMode ? 'bg-white/10 border-white/20 text-white' : 'border-gray-700 text-gray-400'}`}
+                                              >
+                                                  Calm Mode
+                                              </button>
+                                              <button
+                                                  onClick={() => {
+                                                      const next = !isBreathingCueEnabled;
+                                                      setIsBreathingCueEnabled(next);
+                                                      triggerSound(next ? 'enable' : 'disable');
+                                                  }}
+                                                  className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-transform active:scale-95 ${isBreathingCueEnabled ? 'bg-white/10 border-white/20 text-white' : 'border-gray-700 text-gray-400'}`}
+                                              >
+                                                  Breathing Cue
+                                              </button>
+                                          </div>
 
-                                  {isBreathingCueEnabled && state === 'running' && (
-                                      <div className="text-[11px] uppercase tracking-[0.3em] text-white/70 animate-breathe">
-                                          Breathe In · Breathe Out
-                                      </div>
-                                  )}
-                                  
-                                  {(state === 'setup' || state === 'running' || state === 'paused') && (
-                                      <div className={`w-full max-w-3xl mt-6 transform-gpu transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] origin-top ${isAIExpanded ? 'scale-[0.72] -translate-y-10 opacity-90' : 'scale-100 translate-y-0'}`}>
-                                          <div className="text-center">
-                                              <div className={`font-mono font-bold text-white tracking-tighter drop-shadow-md transition-all duration-300 ${
+                                          {(state === 'setup' || state === 'running' || state === 'paused') && (
+                                              <div className={`w-full max-w-3xl transform-gpu transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] origin-top ${
                                                   isAIExpanded
-                                                      ? 'text-5xl md:text-6xl'
+                                                      ? 'mt-1 scale-[0.78] translate-y-0 opacity-95'
                                                       : state === 'setup'
-                                                      ? 'text-8xl md:text-9xl'
-                                                      : 'text-7xl md:text-8xl'
+                                                      ? 'mt-4 scale-100 translate-y-0'
+                                                      : 'mt-6 scale-100 translate-y-0'
                                               }`}>
-                                                  {formatTime(state === 'setup' ? setupTotalSeconds : secondsRemaining)}
+                                                  <div className="text-center">
+                                                      <div className={`font-mono font-bold text-white tracking-tighter drop-shadow-md transition-all duration-300 ${
+                                                          isAIExpanded
+                                                              ? 'text-5xl md:text-6xl'
+                                                              : state === 'setup'
+                                                              ? 'text-8xl md:text-9xl'
+                                                              : 'text-7xl md:text-8xl'
+                                                      }`}>
+                                                          {formatTime(state === 'setup' ? setupTotalSeconds : secondsRemaining)}
+                                                      </div>
+                                                      {state === 'setup' && (
+                                                          <div className="text-[10px] text-gray-400 uppercase tracking-[0.2em] mt-2">
+                                                              Set your focus duration
+                                                          </div>
+                                                      )}
+                                                  </div>
+
+                                                  <div className={`w-full ${isAIExpanded ? 'mt-3' : 'mt-4'}`}>
+                                                      {state === 'setup' ? (
+                                                          <div>
+                                                              <input
+                                                                  type="range"
+                                                                  min="60"
+                                                                  max={maxTotalSeconds}
+                                                                  step="60"
+                                                                  value={setupTotalSeconds}
+                                                                  onChange={(e) => {
+                                                                      const snapped = snapToMinute(Number(e.target.value));
+                                                                      setMinutes(snapped / 60);
+                                                                      handleSliderTick();
+                                                                  }}
+                                                                  className={`w-full accent-falcon-gold ${isAIExpanded ? 'h-3 md:h-4' : 'h-6 md:h-7'}`}
+                                                              />
+                                                              <div className="mt-2 flex justify-between text-[10px] text-white/50 uppercase tracking-[0.2em]">
+                                                                  <span>1:00</span>
+                                                                  <span>59:59</span>
+                                                              </div>
+                                                          </div>
+                                                      ) : (
+                                                          <div className={`relative rounded-full bg-white/15 overflow-hidden ${isAIExpanded ? 'h-3 md:h-4' : 'h-8 md:h-10'}`}>
+                                                              <div
+                                                                  className="absolute inset-y-0 left-0 bg-emerald-400/90 transition-[width] duration-500 ease-out"
+                                                                  style={{ width: `${Math.max(0, (1 - runningProgress)) * 100}%` }}
+                                                              />
+                                                          </div>
+                                                      )}
+                                                  </div>
                                               </div>
-                                              <div className="text-[10px] text-gray-400 uppercase tracking-[0.2em] mt-2">
-                                                  {state === 'setup' ? 'Set your focus duration' : 'Minutes Remaining'}
-                                              </div>
+                                          )}
+                                      </div>
+                                  ) : (
+                                      <>
+                                          <div className="flex flex-wrap items-center justify-center gap-2">
+                                              <button
+                                                  onClick={() => {
+                                                      const next = !isCalmMode;
+                                                      setIsCalmMode(next);
+                                                      triggerSound(next ? 'enable' : 'disable');
+                                                  }}
+                                                  className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-transform active:scale-95 ${isCalmMode ? 'bg-white/10 border-white/20 text-white' : 'border-gray-700 text-gray-400'}`}
+                                              >
+                                                  Calm Mode
+                                              </button>
+                                              <button
+                                                  onClick={() => {
+                                                      const next = !isBreathingCueEnabled;
+                                                      setIsBreathingCueEnabled(next);
+                                                      triggerSound(next ? 'enable' : 'disable');
+                                                  }}
+                                                  className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-transform active:scale-95 ${isBreathingCueEnabled ? 'bg-white/10 border-white/20 text-white' : 'border-gray-700 text-gray-400'}`}
+                                              >
+                                                  Breathing Cue
+                                              </button>
                                           </div>
 
-                                          <div className="mt-4 w-full">
-                                              {state === 'setup' ? (
-                                                  <div>
-                                                      <input
-                                                          type="range"
-                                                          min="60"
-                                                          max={maxTotalSeconds}
-                                                          step="60"
-                                                          value={setupTotalSeconds}
-                                                          onChange={(e) => {
-                                                              const snapped = snapToMinute(Number(e.target.value));
-                                                              setMinutes(snapped / 60);
-                                                              handleSliderTick();
-                                                          }}
-                                                          className={`w-full accent-falcon-gold ${isAIExpanded ? 'h-3 md:h-4' : 'h-6 md:h-7'}`}
-                                                      />
-                                                      <div className="mt-2 flex justify-between text-[10px] text-white/50 uppercase tracking-[0.2em]">
-                                                          <span>1:00</span>
-                                                          <span>59:59</span>
+                                          {isBreathingCueEnabled && state === 'running' && (
+                                              <div className="text-[11px] uppercase tracking-[0.3em] text-white/70 animate-breathe">
+                                                  Breathe In · Breathe Out
+                                              </div>
+                                          )}
+                                          
+                                          {(state === 'setup' || state === 'running' || state === 'paused') && (
+                                              <div className={`w-full max-w-3xl transform-gpu transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] origin-top ${
+                                                  isAIExpanded
+                                                      ? 'mt-1 scale-[0.78] translate-y-0 opacity-95'
+                                                      : state === 'setup'
+                                                      ? 'mt-4 scale-100 translate-y-0'
+                                                      : 'mt-6 scale-100 translate-y-0'
+                                              }`}>
+                                                  <div className="text-center">
+                                                      <div className={`font-mono font-bold text-white tracking-tighter drop-shadow-md transition-all duration-300 ${
+                                                          isAIExpanded
+                                                              ? 'text-5xl md:text-6xl'
+                                                              : state === 'setup'
+                                                              ? 'text-8xl md:text-9xl'
+                                                              : 'text-7xl md:text-8xl'
+                                                      }`}>
+                                                          {formatTime(state === 'setup' ? setupTotalSeconds : secondsRemaining)}
                                                       </div>
+                                                      {state === 'setup' && (
+                                                          <div className="text-[10px] text-gray-400 uppercase tracking-[0.2em] mt-2">
+                                                              Set your focus duration
+                                                          </div>
+                                                      )}
                                                   </div>
-                                              ) : (
-                                                  <div className={`relative rounded-full bg-white/15 overflow-hidden ${isAIExpanded ? 'h-3 md:h-4' : 'h-8 md:h-10'}`}>
-                                                      <div
-                                                          className="absolute inset-y-0 left-0 bg-emerald-400/90 transition-[width] duration-500 ease-out"
-                                                          style={{ width: `${Math.max(0, (1 - runningProgress)) * 100}%` }}
-                                                      />
+
+                                                  <div className={`w-full ${isAIExpanded ? 'mt-3' : 'mt-4'}`}>
+                                                      {state === 'setup' ? (
+                                                          <div>
+                                                              <input
+                                                                  type="range"
+                                                                  min="60"
+                                                                  max={maxTotalSeconds}
+                                                                  step="60"
+                                                                  value={setupTotalSeconds}
+                                                                  onChange={(e) => {
+                                                                      const snapped = snapToMinute(Number(e.target.value));
+                                                                      setMinutes(snapped / 60);
+                                                                      handleSliderTick();
+                                                                  }}
+                                                                  className={`w-full accent-falcon-gold ${isAIExpanded ? 'h-3 md:h-4' : 'h-6 md:h-7'}`}
+                                                              />
+                                                              <div className="mt-2 flex justify-between text-[10px] text-white/50 uppercase tracking-[0.2em]">
+                                                                  <span>1:00</span>
+                                                                  <span>59:59</span>
+                                                              </div>
+                                                          </div>
+                                                      ) : (
+                                                          <div className={`relative rounded-full bg-white/15 overflow-hidden ${isAIExpanded ? 'h-3 md:h-4' : 'h-8 md:h-10'}`}>
+                                                              <div
+                                                                  className="absolute inset-y-0 left-0 bg-emerald-400/90 transition-[width] duration-500 ease-out"
+                                                                  style={{ width: `${Math.max(0, (1 - runningProgress)) * 100}%` }}
+                                                              />
+                                                          </div>
+                                                      )}
                                                   </div>
-                                              )}
-                                          </div>
-                                      </div>
+                                              </div>
+                                          )}
+                                      </>
                                   )}
                               </div>
                           </div>
@@ -701,7 +827,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
 
                   <div className="w-full px-4 md:px-8 pointer-events-auto">
                       <div className="mx-auto w-full max-w-2xl">
-                          <SpotifyPlayer className="w-full" onArtworkChange={handleSpotifyArtworkChange} />
+                          <SpotifyPlayer className="w-full" onArtworkChange={handleSpotifyArtworkChange} onMenuToggle={setIsMixesOpen} />
                       </div>
                   </div>
 
@@ -712,6 +838,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                               onSearch={handleAISearch}
                               onOpenChat={() => {}}
                               onBarFocus={handleAIBarFocus}
+                              searchMode="bfhs-only"
                               hideChips={true}
                           />
                       </div>
