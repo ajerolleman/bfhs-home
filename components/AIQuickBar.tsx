@@ -6,11 +6,12 @@ interface AIQuickBarProps {
     onSearch: (query: string, image?: string | null) => void;
     onExpandChange?: (expanded: boolean) => void;
     onOpenChat?: () => void;
+    onBarFocus?: () => void;
     docked?: boolean;
     hideChips?: boolean;
 }
 
-const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpenChat, docked, hideChips }) => {
+const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpenChat, onBarFocus, docked, hideChips }) => {
     const [query, setQuery] = useState('');
     const [isFocused, setIsFocused] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -178,6 +179,7 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
         e.stopPropagation();
         setIsMenuOpen(!isMenuOpen);
         setIsFocused(true);
+        onBarFocus?.();
     };
 
     return (
@@ -214,7 +216,10 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
                         ${isFocused ? 'ring-1 ring-white/10' : 'hover:shadow-2xl'}
                     `}
                     style={{ transform: 'translateZ(0)' }}
-                    onClick={() => textareaRef.current?.focus()}
+                    onClick={() => {
+                        textareaRef.current?.focus();
+                        onBarFocus?.();
+                    }}
                 >
                     {/* Grain Texture Overlay */}
                     <div className="absolute inset-0 bg-noise opacity-[0.07] pointer-events-none mix-blend-overlay"></div>
@@ -285,7 +290,10 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
                             ref={textareaRef}
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
-                            onFocus={() => setIsFocused(true)}
+                            onFocus={() => {
+                                setIsFocused(true);
+                                onBarFocus?.();
+                            }}
                             onKeyDown={handleKeyDown}
                             onPaste={handlePaste}
                             placeholder="Message BFHS Help or Google..."

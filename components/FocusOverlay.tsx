@@ -18,9 +18,10 @@ interface FocusOverlayProps {
 }
 
 type TimerState = 'setup' | 'running' | 'paused' | 'completed';
+type SoundType = 'enable' | 'disable';
 
 // --- Sound Helper ---
-const playSound = (type: 'tick' | 'press' | 'chime' | 'soft-tick', ctx: AudioContext) => {
+const playSound = (type: SoundType, ctx: AudioContext, volumeScale = 1) => {
     if (ctx.state === 'suspended') ctx.resume();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -29,52 +30,46 @@ const playSound = (type: 'tick' | 'press' | 'chime' | 'soft-tick', ctx: AudioCon
 
     let stopAt = now + 0.12;
 
-    if (type === 'tick') {
-        // Crisp mechanical tick
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(200, now);
-        osc.frequency.exponentialRampToValueAtTime(60, now + 0.04);
-        gain.gain.setValueAtTime(0.04, now);
-        gain.gain.exponentialRampToValueAtTime(0.0006, now + 0.04);
-        stopAt = now + 0.08;
-    } else if (type === 'soft-tick') {
-        // Very subtle tick for rotation
+    if (type === 'enable') {
+        // Higher-pitch, louder premium enable click
         osc.type = 'triangle';
-        osc.frequency.setValueAtTime(320, now);
-        osc.frequency.exponentialRampToValueAtTime(180, now + 0.05);
-        gain.gain.setValueAtTime(0.01, now);
-        gain.gain.exponentialRampToValueAtTime(0.0005, now + 0.05);
-        stopAt = now + 0.08;
-    } else if (type === 'press') {
-        // Satisfying button press
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(400, now);
-        gain.gain.setValueAtTime(0.08, now);
-        gain.gain.exponentialRampToValueAtTime(0.0006, now + 0.12);
-        stopAt = now + 0.16;
-    } else if (type === 'chime') {
-        // Calm completion chime
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(440, now); // A4
-        osc.frequency.exponentialRampToValueAtTime(880, now + 1.1);
-        gain.gain.setValueAtTime(0.0, now);
-        gain.gain.linearRampToValueAtTime(0.08, now + 0.08);
-        gain.gain.exponentialRampToValueAtTime(0.0006, now + 1.4);
-        
-        // Harmonic
+        osc.frequency.setValueAtTime(340, now);
+        osc.frequency.exponentialRampToValueAtTime(250, now + 0.06);
+        gain.gain.setValueAtTime(0.24 * volumeScale, now);
+        gain.gain.exponentialRampToValueAtTime(0.0006, now + 0.14);
+        stopAt = now + 0.14;
+
         const osc2 = ctx.createOscillator();
         const gain2 = ctx.createGain();
-        osc2.type = 'triangle';
-        osc2.frequency.setValueAtTime(554.37, now); // C#5
-        gain2.gain.setValueAtTime(0.0, now);
-        gain2.gain.linearRampToValueAtTime(0.045, now + 0.08);
-        gain2.gain.exponentialRampToValueAtTime(0.0006, now + 1.4);
-        
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(170, now);
+        osc2.frequency.exponentialRampToValueAtTime(120, now + 0.06);
+        gain2.gain.setValueAtTime(0.12 * volumeScale, now);
+        gain2.gain.exponentialRampToValueAtTime(0.0006, now + 0.14);
         osc2.connect(gain2);
         gain2.connect(ctx.destination);
         osc2.start();
-        osc2.stop(now + 1.5);
-        stopAt = now + 1.5;
+        osc2.stop(now + 0.14);
+    } else {
+        // Higher-pitch, loud premium disable click
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(280, now);
+        osc.frequency.exponentialRampToValueAtTime(210, now + 0.08);
+        gain.gain.setValueAtTime(0.22 * volumeScale, now);
+        gain.gain.exponentialRampToValueAtTime(0.0006, now + 0.13);
+        stopAt = now + 0.13;
+
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(140, now);
+        osc2.frequency.exponentialRampToValueAtTime(100, now + 0.08);
+        gain2.gain.setValueAtTime(0.11 * volumeScale, now);
+        gain2.gain.exponentialRampToValueAtTime(0.0006, now + 0.13);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start();
+        osc2.stop(now + 0.13);
     }
 
     osc.connect(gain);
@@ -103,7 +98,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const [taskName, setTaskName] = useState('');
   const [parkingLotItems, setParkingLotItems] = useState<{text: string, time: Date}[]>([]);
   const [isCalmMode, setIsCalmMode] = useState(true);
-  const [isSoundEnabled] = useState(false);
+  const [isSoundEnabled] = useState(true);
   const [isAmbienceEnabled, setIsAmbienceEnabled] = useState(false);
   const [ambienceLevel, setAmbienceLevel] = useState(0.14);
   const [backgroundMode, setBackgroundMode] = useState<'calm' | 'forest' | 'dusk'>('calm');
@@ -113,6 +108,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const [isParkingLotOpen, setIsParkingLotOpen] = useState(false);
   const [parkingInput, setParkingInput] = useState('');
   const [isAIExpanded, setIsAIExpanded] = useState(false);
+  const hasConversation = (currentSession?.messages?.length ?? 0) > 0;
   
   // Refs
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -125,6 +121,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const topRef = useRef<HTMLDivElement>(null);
   const aiDockRef = useRef<HTMLDivElement>(null);
   const chatPanelRef = useRef<HTMLDivElement>(null);
+  const lastSliderTickRef = useRef(0);
 
   const stopAmbience = useCallback(() => {
       const nodes = ambienceRef.current;
@@ -222,10 +219,31 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       return () => document.removeEventListener('mousedown', handleOutside);
   }, [isAIExpanded, handleCollapseAI]);
 
-  const triggerSound = (type: 'tick' | 'press' | 'chime' | 'soft-tick') => {
+  const triggerSound = (type: SoundType, volumeScale = 1) => {
       if (isSoundEnabled && audioCtxRef.current) {
-          playSound(type, audioCtxRef.current);
+          window.setTimeout(() => {
+              if (audioCtxRef.current) {
+                  playSound(type, audioCtxRef.current, volumeScale);
+              }
+          }, 30);
       }
+  };
+  
+  const handleSliderTick = () => {
+      const now = performance.now();
+      if (now - lastSliderTickRef.current > 120) {
+          triggerSound('enable', 1.25);
+          lastSliderTickRef.current = now;
+      }
+  };
+
+  const handleAIBarFocus = () => {
+      if (hasConversation) setIsAIExpanded(true);
+  };
+
+  const handleAISearch = (query: string, image?: string | null) => {
+      onSearch(query, image);
+      setIsAIExpanded(true);
   };
 
   useEffect(() => {
@@ -257,7 +275,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                   const next = Math.max(0, prev - delta);
                   if (next <= 0) {
                       setState('completed');
-                      triggerSound('chime');
+                      triggerSound('enable', 0.8);
                       return 0;
                   }
                   return next;
@@ -300,10 +318,10 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
               e.preventDefault();
               if (state === 'running') {
                   setState('paused');
-                  triggerSound('press');
+                  triggerSound('disable');
               } else if (state === 'paused') {
                   setState('running');
-                  triggerSound('press');
+                  triggerSound('enable');
               }
           }
       };
@@ -330,7 +348,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       setSessionTotalSeconds(totalSeconds);
       setSecondsRemaining(totalSeconds);
       setState('running');
-      triggerSound('press');
+      triggerSound('enable');
   };
 
   const addParkingItem = () => {
@@ -338,7 +356,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       setParkingLotItems(prev => [...prev, { text: parkingInput, time: new Date() }]);
       setParkingInput('');
       setIsParkingLotOpen(false);
-      triggerSound('press');
+      triggerSound('enable');
   };
 
   // --- Visuals ---
@@ -357,6 +375,11 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const runningProgress = sessionTotalSeconds
       ? Math.max(0, Math.min(1, 1 - secondsRemaining / sessionTotalSeconds))
       : 0;
+  const snapToMinute = (rawSeconds: number) => {
+      if (rawSeconds >= maxTotalSeconds - 59) return maxTotalSeconds;
+      const snapped = Math.round(rawSeconds / 60) * 60;
+      return Math.max(60, Math.min(maxTotalSeconds, snapped));
+  };
 
   if (!isActive) return null;
 
@@ -389,7 +412,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                   </div>
                   <div>
                       <div className="text-[10px] uppercase font-bold tracking-widest text-falcon-gold">BFHS Internal</div>
-                      <div className="text-sm font-bold">Focus Studio</div>
+                      <div className="text-sm font-bold">Focus clean</div>
                   </div>
                   <div className="hidden sm:block">
                       <DayTicker userProfile={userProfile} />
@@ -409,14 +432,14 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                   <div className="hidden lg:flex items-center gap-2">
                       <span className="text-[10px] uppercase font-bold tracking-widest text-white/50">Background</span>
                       <div className="flex items-center gap-2">
-                          {(['calm', 'forest', 'dusk'] as const).map((mode) => (
-                              <button
-                                  key={mode}
-                                  onClick={() => { setBackgroundMode(mode); triggerSound('press'); }}
-                                  className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
-                                      backgroundMode === mode ? 'border-falcon-gold/40 text-falcon-gold bg-white/5' : 'border-white/10 text-gray-400'
-                                  }`}
-                              >
+                              {(['calm', 'forest', 'dusk'] as const).map((mode) => (
+                                  <button
+                                      key={mode}
+                                      onClick={() => { setBackgroundMode(mode); triggerSound('enable'); }}
+                                      className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-transform active:scale-95 ${
+                                          backgroundMode === mode ? 'border-falcon-gold/40 text-falcon-gold bg-white/5' : 'border-white/10 text-gray-400'
+                                      }`}
+                                  >
                                   {mode}
                               </button>
                           ))}
@@ -462,7 +485,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                               {state === 'setup' && (
                                   <button 
                                      onClick={startSession}
-                                     className="magnetic-btn px-10 py-3 bg-white text-black font-bold rounded-full hover:scale-105 hover:bg-falcon-gold transition-all shadow-lg"
+                                     className="magnetic-btn px-10 py-3 bg-white text-black font-bold rounded-full hover:scale-105 hover:bg-falcon-gold active:scale-95 active:translate-y-[1px] transition-all shadow-lg"
                                   >
                                       Start Focus
                                   </button>
@@ -473,9 +496,9 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                       <button 
                                          onClick={() => {
                                              setState(state === 'running' ? 'paused' : 'running');
-                                             triggerSound('press');
+                                             triggerSound(state === 'running' ? 'disable' : 'enable');
                                          }}
-                                         className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white border border-white/10 transition-all"
+                                         className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white border border-white/10 transition-all active:scale-95"
                                       >
                                           {state === 'running' ? (
                                               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
@@ -485,8 +508,8 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                       </button>
                                       
                                       <button 
-                                          onClick={() => { setIsParkingLotOpen(true); triggerSound('press'); }}
-                                          className="h-12 px-5 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center gap-2 text-xs font-bold transition-all"
+                                          onClick={() => { setIsParkingLotOpen(true); triggerSound('enable'); }}
+                                          className="h-12 px-5 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center gap-2 text-xs font-bold transition-all active:scale-95"
                                           title="Press 'D'"
                                       >
                                           <span>🧠</span> Capture Distraction
@@ -494,8 +517,8 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
 
                                       {state === 'paused' && (
                                           <button 
-                                             onClick={() => { setState('setup'); triggerSound('press'); }}
-                                             className="h-12 px-5 rounded-full bg-red-500/20 text-red-200 hover:bg-red-500/30 border border-red-500/30 text-xs font-bold transition-all"
+                                             onClick={() => { setState('setup'); triggerSound('disable'); }}
+                                             className="h-12 px-5 rounded-full bg-red-500/20 text-red-200 hover:bg-red-500/30 border border-red-500/30 text-xs font-bold transition-all active:scale-95"
                                           >
                                               End
                                           </button>
@@ -506,14 +529,22 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
 
                           <div className="flex flex-wrap items-center justify-center gap-2">
                               <button
-                                  onClick={() => { setIsCalmMode(!isCalmMode); triggerSound('press'); }}
-                                  className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border ${isCalmMode ? 'bg-white/10 border-white/20 text-white' : 'border-gray-700 text-gray-400'}`}
+                                  onClick={() => {
+                                      const next = !isCalmMode;
+                                      setIsCalmMode(next);
+                                      triggerSound(next ? 'enable' : 'disable');
+                                  }}
+                                  className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-transform active:scale-95 ${isCalmMode ? 'bg-white/10 border-white/20 text-white' : 'border-gray-700 text-gray-400'}`}
                               >
                                   Calm Mode
                               </button>
                               <button
-                                  onClick={() => { setIsBreathingCueEnabled(!isBreathingCueEnabled); triggerSound('press'); }}
-                                  className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border ${isBreathingCueEnabled ? 'bg-white/10 border-white/20 text-white' : 'border-gray-700 text-gray-400'}`}
+                                  onClick={() => {
+                                      const next = !isBreathingCueEnabled;
+                                      setIsBreathingCueEnabled(next);
+                                      triggerSound(next ? 'enable' : 'disable');
+                                  }}
+                                  className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-transform active:scale-95 ${isBreathingCueEnabled ? 'bg-white/10 border-white/20 text-white' : 'border-gray-700 text-gray-400'}`}
                               >
                                   Breathing Cue
                               </button>
@@ -548,10 +579,14 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                               <input
                                                   type="range"
                                                   min="60"
-                                                  max="3599"
-                                                  step="5"
+                                                  max={maxTotalSeconds}
+                                                  step="60"
                                                   value={setupTotalSeconds}
-                                                  onChange={(e) => setMinutes(Number(e.target.value) / 60)}
+                                                  onChange={(e) => {
+                                                      const snapped = snapToMinute(Number(e.target.value));
+                                                      setMinutes(snapped / 60);
+                                                      handleSliderTick();
+                                                  }}
                                                   className={`w-full accent-falcon-gold ${isAIExpanded ? 'h-3 md:h-4' : 'h-6 md:h-7'}`}
                                               />
                                               <div className="mt-2 flex justify-between text-[10px] text-white/50 uppercase tracking-[0.2em]">
@@ -602,7 +637,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                       onClick={() => { 
                                           setState('setup'); 
                                           setParkingLotItems([]); 
-                                          triggerSound('press');
+                                          triggerSound('enable');
                                       }}
                                       className="px-8 py-3 bg-falcon-green text-white font-bold rounded-lg hover:bg-[#1a382e] transition-colors"
                                   >
@@ -622,8 +657,12 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                   <div className="flex items-center justify-between">
                                       <span className="text-xs text-white/70">Cafe Ambience</span>
                                       <button
-                                          onClick={() => { setIsAmbienceEnabled(!isAmbienceEnabled); triggerSound('press'); }}
-                                          className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${isAmbienceEnabled ? 'border-falcon-gold/40 text-falcon-gold bg-white/5' : 'border-white/10 text-gray-400'}`}
+                                          onClick={() => {
+                                              const next = !isAmbienceEnabled;
+                                              setIsAmbienceEnabled(next);
+                                              triggerSound(next ? 'enable' : 'disable');
+                                          }}
+                                          className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-transform active:scale-95 ${isAmbienceEnabled ? 'border-falcon-gold/40 text-falcon-gold bg-white/5' : 'border-white/10 text-gray-400'}`}
                                       >
                                           {isAmbienceEnabled ? 'On' : 'Off'}
                                       </button>
@@ -634,7 +673,10 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                       max="0.3" 
                                       step="0.01"
                                       value={ambienceLevel}
-                                      onChange={(e) => setAmbienceLevel(Number(e.target.value))}
+                                      onChange={(e) => {
+                                          setAmbienceLevel(Number(e.target.value));
+                                          handleSliderTick();
+                                      }}
                                       className="w-full accent-falcon-gold"
                                   />
                               </div>
@@ -676,11 +718,9 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
 
                   <div className="mt-4 px-4 md:px-8">
                       <AIQuickBar 
-                          onSearch={onSearch}
+                          onSearch={handleAISearch}
                           onOpenChat={() => {}}
-                          onExpandChange={(expanded) => {
-                              if (expanded) setIsAIExpanded(true);
-                          }}
+                          onBarFocus={handleAIBarFocus}
                           hideChips={true}
                       />
                   </div>
