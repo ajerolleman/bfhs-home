@@ -591,7 +591,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                       </div>
                                   )}
 
-                                  {(state === 'running' || state === 'paused') && (
+                                  {(state === 'running' || state === 'paused') && !isAIExpanded && (
                                       <div className="flex flex-wrap items-center justify-center gap-3">
                                           <button 
                                              onClick={() => {
@@ -727,7 +727,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                               Start Focus
                                           </button>
                                       </div>
-                                  ) : state === 'completed' ? null : (
+                                  ) : state === 'completed' ? null : isAIExpanded ? null : (
                                       <>
                                           <div className="flex flex-wrap items-center justify-center gap-2">
                                               <button
