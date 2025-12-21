@@ -101,7 +101,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const [isSoundEnabled] = useState(true);
   const [isAmbienceEnabled, setIsAmbienceEnabled] = useState(false);
   const [ambienceLevel, setAmbienceLevel] = useState(0.14);
-  const [backgroundMode] = useState<'calm' | 'forest' | 'dusk'>('dusk');
+  const [backgroundMode] = useState<'calm' | 'forest' | 'dusk'>('forest');
   const [isBreathingCueEnabled, setIsBreathingCueEnabled] = useState(false);
   
   // UI State
@@ -425,6 +425,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const showHeaderTimer = isAIExpanded && isFocusMode;
   const showCenteredTimer = isFocusMode && !isAIExpanded;
   const hasArtwork = Boolean(spotifyArtworkUrl);
+  const activeBackgroundMode = hasArtwork ? 'dusk' : backgroundMode;
   const aiDockClearance = aiDockHeight ? aiDockHeight + 16 : 0;
   const snapToMinute = (rawSeconds: number) => {
       if (rawSeconds >= maxTotalSeconds - 59) return maxTotalSeconds;
@@ -435,12 +436,12 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   if (!isActive) return null;
 
   return (
-    <div className={`fixed inset-0 z-[150] text-white overflow-hidden overscroll-none select-none font-sans ${backgroundMode === 'dusk' ? 'bg-[#0C101B]' : 'bg-[#0B1310]'}`}>
+    <div className={`fixed inset-0 z-[150] text-white overflow-hidden overscroll-none select-none font-sans ${activeBackgroundMode === 'dusk' ? 'bg-[#0C101B]' : 'bg-[#0B1310]'}`}>
       {/* Background */}
       <div className={`fixed inset-0 ${
-          backgroundMode === 'forest'
+          activeBackgroundMode === 'forest'
               ? 'bg-gradient-to-br from-[#07140F] via-[#0E231A] to-[#091611]'
-              : backgroundMode === 'dusk'
+              : activeBackgroundMode === 'dusk'
               ? 'bg-gradient-to-br from-[#0B1120] via-[#0F182A] to-[#0C111D]'
               : 'bg-gradient-to-br from-[#0B1310] via-[#0F1C18] to-[#0B1310]'
       }`} />
@@ -578,7 +579,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                       <div className={`flex-1 flex ${isFocusMode ? 'items-start' : 'items-center'} justify-center transform-gpu transition-transform duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)]`}>
                           <div className={`w-full max-w-3xl mx-auto ${isFocusMode ? 'pt-2' : ''}`}>
                               <div className={`flex flex-col items-center text-center ${isAIExpanded ? 'gap-3' : 'gap-4'}`}>
-                                  {state !== 'setup' && (
+                                  {isFocusMode && (
                                       <div className={`font-extrabold text-white tracking-tight leading-none ${
                                           isAIExpanded
                                               ? 'text-4xl md:text-5xl lg:text-6xl'
@@ -726,7 +727,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                               Start Focus
                                           </button>
                                       </div>
-                                  ) : (
+                                  ) : state === 'completed' ? null : (
                                       <>
                                           <div className="flex flex-wrap items-center justify-center gap-2">
                                               <button
@@ -764,46 +765,48 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                       </div>
 
                       {state === 'completed' ? (
-                          <div className="mt-12 max-w-md w-full mx-auto animate-fade-in-up">
-                              <div className="text-center mb-8">
-                                  <div className="text-5xl mb-4">🎉</div>
-                                  <h2 className="text-2xl font-bold text-white mb-2">Session Complete</h2>
-                                  <p className="text-gray-400">You focused on "{taskName}" for {formatTime(sessionTotalSeconds)}.</p>
-                              </div>
-
-                              {parkingLotItems.length > 0 && (
-                                  <div className="bg-white/5 rounded-xl border border-white/10 p-6 mb-8">
-                                      <h3 className="text-xs font-bold text-falcon-gold uppercase tracking-wider mb-4 flex items-center gap-2">
-                                          <span>🧠</span> Parking Lot Items
-                                      </h3>
-                                      <ul className="space-y-3">
-                                          {parkingLotItems.map((item, idx) => (
-                                              <li key={idx} className="flex justify-between items-start text-sm border-b border-white/5 pb-2 last:border-0">
-                                                  <span className="text-gray-200">{item.text}</span>
-                                                  <span className="text-gray-500 text-xs ml-4">{item.time.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                                              </li>
-                                          ))}
-                                      </ul>
+                          <div className="absolute inset-0 z-[115] flex items-center justify-center px-4">
+                              <div className="max-w-md w-full mx-auto animate-fade-in-up text-center">
+                                  <div className="mb-8">
+                                      <div className="text-6xl mb-4">🎉</div>
+                                      <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">Session Complete</h2>
+                                      <p className="text-gray-400">You focused for {formatTime(sessionTotalSeconds)}.</p>
                                   </div>
-                              )}
 
-                              <div className="flex justify-center gap-4">
-                                  <button 
-                                      onClick={() => { 
-                                          setState('setup'); 
-                                          setParkingLotItems([]); 
-                                          triggerSound('enable');
-                                      }}
-                                      className="px-8 py-3 bg-falcon-green text-white font-bold rounded-lg hover:bg-[#1a382e] transition-colors"
-                                  >
-                                      New Session
-                                  </button>
-                                  <button 
-                                      onClick={onExit}
-                                      className="px-8 py-3 border border-white/10 text-gray-300 font-bold rounded-lg hover:bg-white/5 transition-colors"
-                                  >
-                                      Exit
-                                  </button>
+                                  {parkingLotItems.length > 0 && (
+                                      <div className="bg-white/5 rounded-xl border border-white/10 p-6 mb-8 text-left">
+                                          <h3 className="text-xs font-bold text-falcon-gold uppercase tracking-wider mb-4 flex items-center gap-2">
+                                              <span>🧠</span> Parking Lot Items
+                                          </h3>
+                                          <ul className="space-y-3">
+                                              {parkingLotItems.map((item, idx) => (
+                                                  <li key={idx} className="flex justify-between items-start text-sm border-b border-white/5 pb-2 last:border-0">
+                                                      <span className="text-gray-200">{item.text}</span>
+                                                      <span className="text-gray-500 text-xs ml-4">{item.time.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                                                  </li>
+                                              ))}
+                                          </ul>
+                                      </div>
+                                  )}
+
+                                  <div className="flex justify-center gap-4">
+                                      <button 
+                                          onClick={() => { 
+                                              setState('setup'); 
+                                              setParkingLotItems([]); 
+                                              triggerSound('enable');
+                                          }}
+                                          className="px-8 py-3 bg-falcon-green text-white font-bold rounded-lg hover:bg-[#1a382e] transition-colors"
+                                      >
+                                          New Session
+                                      </button>
+                                      <button 
+                                          onClick={onExit}
+                                          className="px-8 py-3 border border-white/10 text-gray-300 font-bold rounded-lg hover:bg-white/5 transition-colors"
+                                      >
+                                          Exit
+                                      </button>
+                                  </div>
                               </div>
                           </div>
                       ) : null}
