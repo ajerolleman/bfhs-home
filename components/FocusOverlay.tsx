@@ -471,7 +471,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
           </div>
 
           {/* Scrollable Body */}
-          <div className={`flex-1 min-h-0 overflow-hidden flex flex-col transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${isAIExpanded ? 'pb-[45vh]' : 'pb-[26rem]'}`}>
+          <div className={`flex-1 min-h-0 overflow-hidden flex flex-col transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${isAIExpanded ? 'pb-[48vh]' : 'pb-[28rem]'}`}>
               <div ref={topRef} className="h-0 w-full" />
               {/* Main Content */}
               <div className={`w-full flex flex-col items-center px-4 md:px-8 pb-10 min-h-[calc(100vh-220px)] transform-gpu transition-transform duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${state === 'setup' ? 'justify-center pt-6' : 'justify-start pt-8 md:pt-10'} ${isAIExpanded ? 'scale-[0.97] -translate-y-4' : 'scale-100 translate-y-0'}`}>
@@ -667,37 +667,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                   </button>
                               </div>
                           </div>
-                      ) : (
-                          <div className="mt-10 w-full max-w-md mx-auto space-y-4">
-                              <div className="space-y-3">
-                                  <div className="flex items-center justify-between">
-                                      <span className="text-xs text-white/70">Cafe Ambience</span>
-                                      <button
-                                          onClick={() => {
-                                              const next = !isAmbienceEnabled;
-                                              setIsAmbienceEnabled(next);
-                                              triggerSound(next ? 'enable' : 'disable');
-                                          }}
-                                          className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-transform active:scale-95 ${isAmbienceEnabled ? 'border-falcon-gold/40 text-falcon-gold bg-white/5' : 'border-white/10 text-gray-400'}`}
-                                      >
-                                          {isAmbienceEnabled ? 'On' : 'Off'}
-                                      </button>
-                                  </div>
-                                  <input 
-                                      type="range" 
-                                      min="0" 
-                                      max="0.3" 
-                                      step="0.01"
-                                      value={ambienceLevel}
-                                      onChange={(e) => {
-                                          setAmbienceLevel(Number(e.target.value));
-                                          handleSliderTick();
-                                      }}
-                                      className="w-full accent-falcon-gold"
-                                  />
-                              </div>
-                          </div>
-                      )}
+                      ) : null}
                   </div>
               </div>
           </div>

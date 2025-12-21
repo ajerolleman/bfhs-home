@@ -56,18 +56,17 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
         if (nextToken) setToken(nextToken);
     }, []);
 
-    useEffect(() => {
-        if (token) return;
-        artworkRef.current = null;
-        setArtworkUrl(null);
-        onArtworkChange?.(null);
-    }, [token, onArtworkChange]);
-
     const updateArtwork = useCallback((url: string | null) => {
+        if (!url) return;
         if (url !== artworkRef.current) {
             artworkRef.current = url;
             setArtworkUrl(url);
             onArtworkChange?.(url);
+            try {
+                localStorage.setItem('spotify_last_artwork_url', url);
+            } catch (e) {
+                // Ignore storage failures.
+            }
         }
     }, [onArtworkChange]);
 
@@ -82,15 +81,22 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
     }, [updateArtwork]);
 
     useEffect(() => {
+        try {
+            const cached = localStorage.getItem('spotify_last_artwork_url');
+            if (cached) updateArtwork(cached);
+        } catch (e) {
+            // Ignore storage failures.
+        }
+    }, [updateArtwork]);
+
+    const fetchNowPlaying = useCallback((delay = 0) => {
         if (!token) return;
-        let isMounted = true;
-        const fetchNowPlaying = () => {
+        const run = () => {
             fetch('https://api.spotify.com/v1/me/player', {
                 headers: { Authorization: `Bearer ${token}` }
             })
                 .then((res) => (res.status === 204 ? null : res.json()))
                 .then((data) => {
-                    if (!isMounted) return;
                     const images = data?.item?.album?.images;
                     const nextUrl =
                         images?.[0]?.url ||
@@ -100,16 +106,39 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
                     updateArtwork(nextUrl);
                 })
                 .catch(() => {
-                    if (isMounted) updateArtwork(null);
+                    // Ignore transient errors; keep cached art.
                 });
         };
-        fetchNowPlaying();
-        const interval = window.setInterval(fetchNowPlaying, 15000);
-        return () => {
-            isMounted = false;
-            window.clearInterval(interval);
-        };
+        if (delay > 0) {
+            window.setTimeout(run, delay);
+        } else {
+            run();
+        }
     }, [token, updateArtwork]);
+
+    useEffect(() => {
+        if (!token) return;
+        fetchNowPlaying();
+        const interval = window.setInterval(() => fetchNowPlaying(), 15000);
+        return () => window.clearInterval(interval);
+    }, [token, fetchNowPlaying]);
+
+    useEffect(() => {
+        if (!token) return;
+        const container = containerRef.current;
+        if (!container) return;
+        const handleClick = (event: MouseEvent) => {
+            const target = event.target as HTMLElement | null;
+            const button = target?.closest('button');
+            if (!button) return;
+            const label = button.getAttribute('aria-label')?.toLowerCase() || '';
+            if (label.includes('next') || label.includes('previous') || label.includes('skip')) {
+                fetchNowPlaying(350);
+            }
+        };
+        container.addEventListener('click', handleClick, true);
+        return () => container.removeEventListener('click', handleClick, true);
+    }, [token, fetchNowPlaying]);
 
     useEffect(() => {
         if (!token) return;
@@ -182,6 +211,14 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
                     onClick={() => {
                         clearSpotifyAuth();
                         setToken(null);
+                        setArtworkUrl(null);
+                        artworkRef.current = null;
+                        onArtworkChange?.(null);
+                        try {
+                            localStorage.removeItem('spotify_last_artwork_url');
+                        } catch (e) {
+                            // Ignore storage failures.
+                        }
                     }}
                     className="text-[10px] uppercase tracking-[0.2em] font-bold text-white/50 hover:text-white transition"
                 >
