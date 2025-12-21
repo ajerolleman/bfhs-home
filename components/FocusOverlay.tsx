@@ -471,7 +471,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
           </div>
 
           {/* Scrollable Body */}
-          <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth pb-56 flex flex-col">
+          <div className={`flex-1 min-h-0 overflow-y-auto scroll-smooth flex flex-col transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${isAIExpanded ? 'pb-[45vh]' : 'pb-[26rem]'}`}>
               <div ref={topRef} className="h-0 w-full" />
               {/* Main Content */}
               <div className={`w-full flex flex-col items-center px-4 md:px-8 pb-10 min-h-[calc(100vh-220px)] transform-gpu transition-transform duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${state === 'setup' ? 'justify-center pt-6' : 'justify-start pt-8 md:pt-10'} ${isAIExpanded ? 'scale-[0.97] -translate-y-4' : 'scale-100 translate-y-0'}`}>
@@ -703,10 +703,10 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
           </div>
 
           {/* AI Dock */}
-          <div ref={aiDockRef} className="fixed bottom-0 left-0 right-0 pb-6 pt-3 z-30">
-              <div className="bg-gradient-to-t from-[#0B1310]/95 via-[#0B1310]/80 to-transparent backdrop-blur-xl">
-                  <div className="mx-auto w-full max-w-5xl px-4 md:px-8">
-                      <div className={`overflow-hidden transition-[max-height,opacity,transform] duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${isAIExpanded ? 'max-h-[45vh] opacity-100 translate-y-0 pointer-events-auto' : 'max-h-0 opacity-0 translate-y-4 pointer-events-none'}`}>
+          <div ref={aiDockRef} className="fixed bottom-0 left-0 right-0 pb-6 pt-3 z-30 pointer-events-none">
+              <div className="flex flex-col items-center gap-4">
+                  <div className="mx-auto w-full max-w-5xl px-4 md:px-8 pointer-events-auto">
+                      <div className={`overflow-hidden transition-[max-height,opacity,transform] duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${isAIExpanded ? 'max-h-[45vh] opacity-100 translate-y-0' : 'max-h-0 opacity-0 translate-y-4'}`}>
                           <div ref={chatPanelRef} className="h-[40vh] min-h-[220px] rounded-3xl border border-white/10 bg-white/5 backdrop-blur-lg overflow-hidden shadow-[0_18px_40px_-30px_rgba(0,0,0,0.6)]">
                               <div className="relative h-full dark">
                                   <button
@@ -726,19 +726,22 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                       </div>
                   </div>
 
-                  <div className="mt-4 flex justify-center px-4 md:px-8">
-                      <div className="w-full max-w-2xl">
+                  <div className="w-full px-4 md:px-8 pointer-events-auto">
+                      <div className="mx-auto w-full max-w-2xl rounded-3xl border border-white/10 bg-white/5 backdrop-blur-lg px-4 py-3 shadow-[0_12px_40px_-24px_rgba(0,0,0,0.7)]">
                           <SpotifyPlayer className="w-full" onArtworkChange={handleSpotifyArtworkChange} />
                       </div>
                   </div>
 
-                  <div className="mt-4 px-4 md:px-8">
-                      <AIQuickBar 
-                          onSearch={handleAISearch}
-                          onOpenChat={() => {}}
-                          onBarFocus={handleAIBarFocus}
-                          hideChips={true}
-                      />
+                  <div className="w-full px-4 md:px-8 pointer-events-auto">
+                      <div className="mx-auto w-full max-w-3xl flex flex-col items-center gap-3">
+                          <div className="h-1.5 w-12 rounded-full bg-white/25 shadow-[0_0_12px_rgba(255,255,255,0.15)]"></div>
+                          <AIQuickBar 
+                              onSearch={handleAISearch}
+                              onOpenChat={() => {}}
+                              onBarFocus={handleAIBarFocus}
+                              hideChips={true}
+                          />
+                      </div>
                   </div>
               </div>
           </div>
