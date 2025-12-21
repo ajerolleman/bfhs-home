@@ -110,7 +110,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const [isAIExpanded, setIsAIExpanded] = useState(false);
   const [isMixesOpen, setIsMixesOpen] = useState(false);
   const [spotifyArtworkUrl, setSpotifyArtworkUrl] = useState<string | null>(null);
-  const [aiDockHeight, setAiDockHeight] = useState(240);
+  const [aiDockHeight, setAiDockHeight] = useState(180);
   const hasConversation = (currentSession?.messages?.length ?? 0) > 0;
   
   // Refs
@@ -806,8 +806,8 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
               <div className="flex flex-col items-center gap-4">
                   <div className="mx-auto w-full max-w-5xl px-4 md:px-8 pointer-events-auto">
                       <div className={`overflow-hidden transition-[max-height,opacity,transform] duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${isAIExpanded ? 'max-h-[45vh] opacity-100 translate-y-0' : 'max-h-0 opacity-0 translate-y-4'}`}>
-                          <div ref={chatPanelRef} className="h-[40vh] min-h-[220px] rounded-3xl border border-white/10 bg-white/5 backdrop-blur-lg overflow-hidden shadow-[0_18px_40px_-30px_rgba(0,0,0,0.6)]">
-                              <div className="relative h-full dark">
+                          <div ref={chatPanelRef} className="h-[60vh] max-h-[72vh] min-h-[360px] rounded-3xl border border-white/10 bg-white/5 backdrop-blur-lg overflow-hidden shadow-[0_18px_40px_-30px_rgba(0,0,0,0.6)]">
+                              <div className="relative h-full dark flex flex-col min-h-0">
                                   <button
                                       onClick={handleCollapseAI}
                                       className="absolute right-3 top-3 z-10 text-[10px] uppercase tracking-widest font-bold text-white/60 hover:text-white bg-black/30 border border-white/10 px-3 py-1 rounded-full"
@@ -825,9 +825,20 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                       </div>
                   </div>
 
-                  <div className="w-full px-4 md:px-8 pointer-events-auto">
-                      <div className="mx-auto w-full max-w-2xl">
-                          <SpotifyPlayer className="w-full" onArtworkChange={handleSpotifyArtworkChange} onMenuToggle={setIsMixesOpen} />
+                  <div
+                      className={`pointer-events-auto transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${
+                          isAIExpanded
+                              ? 'w-full px-4 md:px-8 lg:fixed lg:right-6 lg:top-28 lg:w-[280px] xl:lg:w-[320px] lg:px-0 lg:translate-x-0 lg:opacity-100'
+                              : 'w-full px-4 md:px-8 translate-y-0 opacity-100'
+                      }`}
+                  >
+                      <div className={`${isAIExpanded ? 'lg:w-full' : 'mx-auto w-full max-w-2xl'}`}>
+                          <SpotifyPlayer
+                              className="w-full"
+                              layout={isAIExpanded ? 'vertical' : 'horizontal'}
+                              onArtworkChange={handleSpotifyArtworkChange}
+                              onMenuToggle={setIsMixesOpen}
+                          />
                       </div>
                   </div>
 

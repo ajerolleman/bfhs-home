@@ -93,7 +93,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     }
 
     return (
-        <div ref={containerRef} className="flex-1 overflow-y-auto w-full scroll-smooth">
+        <div ref={containerRef} className="flex-1 min-h-0 overflow-y-auto w-full scroll-smooth">
             {/* Content Column: Max-width constraint for readability */}
             <div className="w-full max-w-5xl mx-auto px-4 md:px-6 py-6 space-y-8 min-h-full">
                 
@@ -138,7 +138,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                                 <div>
                                     {msg.image && (
                                         <div className="mb-3 rounded-xl overflow-hidden border border-white/20">
-                                            <img src={msg.image} alt="User uploaded" className="max-h-64 object-cover w-full" />
+                                            <img src={msg.image} alt="User uploaded" className="max-h-64 object-cover w-full relative z-10" />
                                         </div>
                                     )}
                                     <p className="whitespace-pre-wrap">{msg.text}</p>
