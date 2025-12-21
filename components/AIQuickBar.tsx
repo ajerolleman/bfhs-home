@@ -7,9 +7,10 @@ interface AIQuickBarProps {
     onExpandChange?: (expanded: boolean) => void;
     onOpenChat?: () => void;
     docked?: boolean;
+    hideChips?: boolean;
 }
 
-const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpenChat, docked }) => {
+const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpenChat, docked, hideChips }) => {
     const [query, setQuery] = useState('');
     const [isFocused, setIsFocused] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -384,7 +385,7 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
             </div>
 
             {/* Helper Chips - Only show when NOT docked */}
-            {!docked && (
+            {!docked && !hideChips && (
                 <div className={`
                     w-full flex justify-center gap-3 overflow-x-auto no-scrollbar py-2
                     transition-all duration-[800ms] ease-out origin-top

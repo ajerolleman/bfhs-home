@@ -15,6 +15,7 @@ import FocusOverlay from './components/FocusOverlay';
 import { subscribeToAuth, getUserProfile, getRecentMemoryNotes } from './services/firebase';
 import { sendMessageToGemini } from './services/geminiService';
 import { createNewSession, saveSession } from './services/chatHistoryService';
+import { initSpotifyAuth } from './services/authService';
 import { UserProfile, ChatMessage, MemoryNote, ChatSession } from './types';
 
 const App: React.FC = () => {
@@ -37,6 +38,10 @@ const App: React.FC = () => {
     }
     return () => { document.body.style.overflow = ''; };
   }, [fullPageChatOpen, isFocusMode]);
+
+  useEffect(() => {
+    initSpotifyAuth();
+  }, []);
 
   useEffect(() => {
     if (!headerRef.current) return;
@@ -126,13 +131,13 @@ const App: React.FC = () => {
 
         <div className={`transition-opacity duration-500 ${isFocusMode ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             <div ref={headerRef} className={`z-[110] transition-all duration-700 ease-spring ${fullPageChatOpen ? 'fixed top-0 left-0 right-0' : 'relative'}`}>
-                <div className="bg-gradient-to-b from-[#1B3B2F] to-[#163127] transition-all duration-500 relative">
+                <div className={`header-safe bg-gradient-to-b from-[#1B3B2F] to-[#163127] transition-all duration-500 relative flex flex-col items-center gap-4 ${fullPageChatOpen ? 'pb-6' : 'pb-4'}`}>
                   <Header onOpenChat={() => { if (!currentSession) setCurrentSession(createNewSession()); setFullPageChatOpen(true); }} onOpenProfile={() => setIsProfileModalOpen(true)} userProfile={userProfile} currentUser={currentUser} compact={fullPageChatOpen} isFocusMode={isFocusMode} onToggleFocus={toggleFocusMode} />
-                  <div className={`container mx-auto max-w-[1200px] relative z-10 flex justify-center transition-all duration-700 ease-spring ${fullPageChatOpen ? 'pb-1 pt-0' : 'pb-4 pt-2'}`}>
+                  <div className={`container mx-auto max-w-[1200px] relative z-10 flex justify-center transition-all duration-700 ease-spring ${fullPageChatOpen ? 'py-0' : 'py-2'}`}>
                       <QuickLinks compact={fullPageChatOpen} />
                   </div>
                 </div>
-                <div className={`bg-gradient-to-b from-[#163127] to-[#12261E] w-full shadow-inner relative transition-all duration-700 ease-spring overflow-hidden ${fullPageChatOpen ? 'max-h-0 opacity-0' : 'max-h-16 opacity-100'}`}>
+                <div className={`bg-gradient-to-b from-[#163127] to-[#12261E] w-full shadow-inner relative transition-all duration-700 ease-spring overflow-hidden ${fullPageChatOpen ? 'max-h-0 opacity-0' : 'max-h-25 opacity-100'}`}>
                   <div className="w-3/4 mx-auto border-t border-white/10 pt-1"></div>
                   <div className="container mx-auto py-3 text-center">
                       <button onClick={() => window.location.href = '/?page=tech-info'} className="text-white/90 font-bold tracking-widest text-sm hover:text-falcon-gold transition-colors uppercase flex items-center justify-center w-full">

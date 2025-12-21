@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { ChatSession, UserProfile } from '../types';
 import ChatPanel from './ChatPanel';
 import AIQuickBar from './AIQuickBar';
+import SpotifyPlayer from './SpotifyPlayer';
 import { BLOCK_SCHEDULE } from '../constants';
 
 interface FocusOverlayProps {
@@ -17,7 +17,7 @@ interface FocusOverlayProps {
   onNewChat: () => void;
 }
 
-type TimerState = 'setup' | 'commitment' | 'running' | 'paused' | 'completed';
+type TimerState = 'setup' | 'running' | 'paused' | 'completed';
 
 // --- Helper: Schedule Logic for Next Period ---
 function getNextPeriodCountdown() {
@@ -62,10 +62,11 @@ const playSound = (type: 'tick' | 'press' | 'chime' | 'soft-tick', ctx: AudioCon
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
     } else if (type === 'soft-tick') {
         // Very subtle tick for rotation
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(800, now);
-        gain.gain.setValueAtTime(0.02, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(180, now + 0.05);
+        gain.gain.setValueAtTime(0.012, now);
+        gain.gain.exponentialRampToValueAtTime(0.0006, now + 0.05);
     } else if (type === 'press') {
         // Satisfying button press
         osc.type = 'sine';
@@ -119,27 +120,94 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   
   // Settings & Data
   const [taskName, setTaskName] = useState('');
-  const [distractionRule, setDistractionRule] = useState('write it in the Parking Lot and continue');
   const [parkingLotItems, setParkingLotItems] = useState<{text: string, time: Date}[]>([]);
   const [isCalmMode, setIsCalmMode] = useState(true);
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+  const [isAmbienceEnabled, setIsAmbienceEnabled] = useState(true);
+  const [ambienceLevel, setAmbienceLevel] = useState(0.14);
+  const [backgroundMode, setBackgroundMode] = useState<'calm' | 'forest' | 'dusk'>('calm');
+  const [isBreathingCueEnabled, setIsBreathingCueEnabled] = useState(false);
   const [nextPeriod, setNextPeriod] = useState<{ name: string, minutes: number } | null>(null);
   
   // UI State
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isParkingLotOpen, setIsParkingLotOpen] = useState(false);
   const [parkingInput, setParkingInput] = useState('');
   const [isDragging, setIsDragging] = useState(false);
+  const [isAIExpanded, setIsAIExpanded] = useState(false);
   
   // Refs
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const ambienceRef = useRef<{ source: AudioBufferSourceNode; gain: GainNode; filters: BiquadFilterNode[] } | null>(null);
+  const ambienceLevelRef = useRef(ambienceLevel);
   const rafRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
   const dialRef = useRef<HTMLDivElement>(null);
-  const angleRef = useRef<number>(0);
   const lastMouseAngleRef = useRef<number>(0);
   const taskInputRef = useRef<HTMLInputElement>(null);
   const parkingInputRef = useRef<HTMLInputElement>(null);
+  const topRef = useRef<HTMLDivElement>(null);
+  const aiDockRef = useRef<HTMLDivElement>(null);
+
+  const stopAmbience = useCallback(() => {
+      const nodes = ambienceRef.current;
+      if (!nodes) return;
+      ambienceRef.current = null;
+      const now = nodes.gain.context.currentTime;
+      nodes.gain.gain.cancelScheduledValues(now);
+      nodes.gain.gain.setTargetAtTime(0.0001, now, 0.15);
+      try {
+          nodes.source.stop(now + 0.4);
+      } catch (e) {
+          // Ignore stop errors if already stopped.
+      }
+      window.setTimeout(() => {
+          nodes.source.disconnect();
+          nodes.filters.forEach((filter) => filter.disconnect());
+          nodes.gain.disconnect();
+      }, 450);
+  }, []);
+
+  const startAmbience = useCallback(() => {
+      const ctx = audioCtxRef.current;
+      if (!ctx || ambienceRef.current) return;
+      if (ctx.state === 'suspended') ctx.resume();
+      const level = ambienceLevelRef.current;
+
+      const buffer = ctx.createBuffer(1, ctx.sampleRate * 6, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      let last = 0;
+      for (let i = 0; i < data.length; i++) {
+          const rand = Math.random() * 2 - 1;
+          last = (last + rand * 0.02) * 0.98;
+          data[i] = Math.max(-1, Math.min(1, last)) * 0.6;
+      }
+
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+
+      const highpass = ctx.createBiquadFilter();
+      highpass.type = 'highpass';
+      highpass.frequency.setValueAtTime(160, ctx.currentTime);
+      highpass.Q.setValueAtTime(0.5, ctx.currentTime);
+
+      const lowpass = ctx.createBiquadFilter();
+      lowpass.type = 'lowpass';
+      lowpass.frequency.setValueAtTime(1400, ctx.currentTime);
+      lowpass.Q.setValueAtTime(0.7, ctx.currentTime);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(level, ctx.currentTime + 1);
+
+      source.connect(highpass);
+      highpass.connect(lowpass);
+      lowpass.connect(gain);
+      gain.connect(ctx.destination);
+      source.start();
+
+      ambienceRef.current = { source, gain, filters: [highpass, lowpass] };
+  }, []);
 
   // --- Audio Init ---
   useEffect(() => {
@@ -148,17 +216,44 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       }
       return () => {
           if (!isActive && audioCtxRef.current) {
+              stopAmbience();
               audioCtxRef.current.close();
               audioCtxRef.current = null;
           }
       };
+  }, [isActive, stopAmbience]);
+
+  useEffect(() => {
+      if (!isActive) setIsAIExpanded(false);
   }, [isActive]);
+
+  useEffect(() => {
+      if (!isAIExpanded) return;
+      aiDockRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [isAIExpanded]);
 
   const triggerSound = (type: 'tick' | 'press' | 'chime' | 'soft-tick') => {
       if (isSoundEnabled && audioCtxRef.current) {
           playSound(type, audioCtxRef.current);
       }
   };
+
+  useEffect(() => {
+      if (!isActive) return;
+      if (isAmbienceEnabled) {
+          startAmbience();
+      } else {
+          stopAmbience();
+      }
+      return () => stopAmbience();
+  }, [isActive, isAmbienceEnabled, startAmbience, stopAmbience]);
+
+  useEffect(() => {
+      const ctx = audioCtxRef.current;
+      ambienceLevelRef.current = ambienceLevel;
+      if (!ctx || !ambienceRef.current) return;
+      ambienceRef.current.gain.gain.setTargetAtTime(ambienceLevel, ctx.currentTime, 0.35);
+  }, [ambienceLevel]);
 
   // --- Check Next Period ---
   useEffect(() => {
@@ -201,19 +296,19 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       if (!isActive) return;
       const handleKeyDown = (e: KeyboardEvent) => {
           if (e.key === 'Escape') {
-              if (isDrawerOpen) setIsDrawerOpen(false);
-              else if (isParkingLotOpen) setIsParkingLotOpen(false);
+              if (isParkingLotOpen) setIsParkingLotOpen(false);
               else onExit();
           }
           
           // Toggle Parking Lot
-          if (e.key.toLowerCase() === 'd' && state === 'running' && !isDrawerOpen && !isParkingLotOpen) {
+          if (e.key.toLowerCase() === 'd' && state === 'running' && !isParkingLotOpen) {
               e.preventDefault();
               setIsParkingLotOpen(true);
           }
 
           // Space to toggle pause
-          if (e.key === ' ' && !isDrawerOpen && !isParkingLotOpen && document.activeElement?.tagName !== 'INPUT') {
+          const activeTag = document.activeElement?.tagName;
+          if (e.key === ' ' && !isParkingLotOpen && activeTag !== 'INPUT' && activeTag !== 'TEXTAREA') {
               e.preventDefault();
               if (state === 'running') {
                   setState('paused');
@@ -226,11 +321,11 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       };
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isActive, state, isDrawerOpen, isParkingLotOpen, onExit]);
+  }, [isActive, state, isParkingLotOpen, onExit]);
 
   // Focus input on state change
   useEffect(() => {
-      if (state === 'commitment' && taskInputRef.current) {
+      if (state === 'setup' && taskInputRef.current) {
           setTimeout(() => taskInputRef.current?.focus(), 100);
       }
       if (isParkingLotOpen && parkingInputRef.current) {
@@ -277,7 +372,8 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
           const minChange = delta * sensitivity;
           
           setMinutes(prev => {
-              const next = Math.max(1, Math.min(180, prev + minChange));
+              const maxMinutes = 59 + 59 / 60;
+              const next = Math.max(1, Math.min(maxMinutes, prev + minChange));
               // Soft tick only on integer change
               if (Math.floor(next) !== Math.floor(prev)) triggerSound('soft-tick');
               return next;
@@ -287,7 +383,10 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
 
   const handleEnd = () => {
       setIsDragging(false);
-      setMinutes(m => Math.round(m));
+      setMinutes(m => {
+          const totalSeconds = Math.max(60, Math.min(3599, Math.round(m * 60)));
+          return totalSeconds / 60;
+      });
   };
 
   useEffect(() => {
@@ -305,9 +404,12 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
 
 
   // --- Helper Functions ---
-  const handleCommit = () => {
-      if (!taskName.trim()) return;
-      setSecondsRemaining(minutes * 60);
+  const startSession = () => {
+      const totalSeconds = Math.max(60, Math.min(3599, Math.round(minutes * 60)));
+      const normalizedMinutes = totalSeconds / 60;
+      if (normalizedMinutes !== minutes) setMinutes(normalizedMinutes);
+      if (!taskName.trim()) setTaskName('Focus Session');
+      setSecondsRemaining(totalSeconds);
       setState('running');
       triggerSound('press');
   };
@@ -318,6 +420,11 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       setParkingInput('');
       setIsParkingLotOpen(false);
       triggerSound('press');
+  };
+
+  const handleCollapseAI = () => {
+      setIsAIExpanded(false);
+      topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   // --- Visuals ---
@@ -353,10 +460,6 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       return `M ${center} ${center} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
   };
 
-  const dialPercentage = state === 'setup' 
-      ? minutes / 60 // Visual: 60 mins = full circle
-      : secondsRemaining / (minutes * 60);
-
   // Allow multi-turn visual in setup? Simplified: cap at 100% visual for setup > 60m
   const visualPercentage = state === 'setup' 
       ? Math.min(1, minutes / 60)
@@ -365,261 +468,351 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   if (!isActive) return null;
 
   return (
-    <div className="fixed inset-0 z-[150] bg-[#0B1220] text-white overflow-hidden select-none font-sans">
-      
-      {/* 1. Background (Calm Gradient + Vignette) */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#0B1220] via-[#121c2e] to-[#0f1724] animate-pulse-slow opacity-60 pointer-events-none"></div>
-      <div className="absolute inset-0 bg-noise opacity-[0.04] pointer-events-none mix-blend-overlay"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)] pointer-events-none"></div>
+    <div className={`fixed inset-0 z-[150] text-white overflow-hidden select-none font-sans ${backgroundMode === 'dusk' ? 'bg-[#0C101B]' : 'bg-[#0B1310]'}`}>
+      {/* Background */}
+      <div className={`absolute inset-0 ${
+          backgroundMode === 'forest'
+              ? 'bg-gradient-to-br from-[#07140F] via-[#0E231A] to-[#091611]'
+              : backgroundMode === 'dusk'
+              ? 'bg-gradient-to-br from-[#0B1120] via-[#0F182A] to-[#0C111D]'
+              : 'bg-gradient-to-br from-[#0B1310] via-[#0F1C18] to-[#0B1310]'
+      }`} />
+      <div className="absolute inset-0 bg-noise opacity-[0.05] pointer-events-none mix-blend-overlay"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),transparent_55%)] pointer-events-none"></div>
+      <div className="absolute -top-32 -left-16 w-[520px] h-[520px] bg-falcon-green/20 rounded-full blur-[160px] animate-focus-orb-slow"></div>
+      <div className="absolute bottom-[-25%] right-[-10%] w-[620px] h-[620px] bg-falcon-gold/10 rounded-full blur-[180px] animate-focus-orb"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.45)_100%)] pointer-events-none"></div>
 
-      {/* 2. Top Bar */}
-      <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center z-20">
-          <div className="flex items-center gap-4">
-               {/* Sound Toggle */}
-               <button 
-                  onClick={() => setIsSoundEnabled(!isSoundEnabled)} 
-                  className={`p-2 rounded-full transition-colors ${isSoundEnabled ? 'text-falcon-gold bg-white/5' : 'text-gray-500'}`}
-                  title="Toggle Sounds"
-               >
-                  {isSoundEnabled ? (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-                  ) : (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
-                  )}
-               </button>
-               {/* Calm Mode Toggle */}
-               {state === 'running' && (
+      <div className="relative z-10 flex flex-col h-full animate-fade-in">
+          {/* Focus Header */}
+          <div className="w-full px-6 py-4 flex items-center justify-between bg-[linear-gradient(135deg,#12261E,#0F2019)] border-b border-white/10">
+              <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center">
+                      <img 
+                          src="https://static.wixstatic.com/media/e6bdc9_9e876e6d3ee44a9e860f83e8afc9774a~mv2.png/v1/fill/w_208,h_200,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Primary%20Logo%20in%20white%20no%20TEXT.png"
+                          alt="BFHS Internal"
+                          className="w-5 h-5 object-contain"
+                      />
+                  </div>
+                  <div>
+                      <div className="text-[10px] uppercase font-bold tracking-widest text-falcon-gold">BFHS Internal</div>
+                      <div className="text-sm font-bold">Focus Studio</div>
+                  </div>
+              </div>
+
+              {nextPeriod && (state === 'running' || state === 'setup') && (
+                  <div className="hidden md:flex flex-col items-center text-xs text-white/70">
+                      <span className="text-[10px] uppercase font-bold tracking-widest text-falcon-gold">Next Period</span>
+                      <span className="font-mono">{nextPeriod.name} in {nextPeriod.minutes}m</span>
+                  </div>
+              )}
+
+              <div className="flex items-center gap-3">
                   <button 
-                      onClick={() => setIsCalmMode(!isCalmMode)}
-                      className={`text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border ${isCalmMode ? 'bg-white/10 border-white/20 text-white' : 'border-gray-700 text-gray-500'}`}
+                     onClick={onExit} 
+                     className="text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors"
                   >
-                      {isCalmMode ? 'Calm Mode' : 'Detail Mode'}
+                      Exit (ESC)
                   </button>
-               )}
+              </div>
           </div>
 
-          {/* School Day Next Period Countdown (Only if valid) */}
-          {nextPeriod && (state === 'running' || state === 'setup') && (
-              <div className="absolute top-6 left-1/2 -translate-x-1/2 hidden md:flex flex-col items-center opacity-50 hover:opacity-100 transition-opacity">
-                  <span className="text-[10px] uppercase font-bold tracking-widest text-falcon-gold">Next Period</span>
-                  <span className="text-sm font-mono text-white">{nextPeriod.name} in {nextPeriod.minutes}m</span>
-              </div>
-          )}
-
-          <button 
-             onClick={onExit} 
-             className="text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors"
-          >
-              Exit (ESC)
-          </button>
-      </div>
-
-      {/* 3. Main Center Stage */}
-      <div className={`relative z-10 w-full h-full flex flex-col items-center justify-center transition-all duration-700 ${isDrawerOpen ? 'md:pr-96' : ''}`}>
-          
-          {/* COMMITMENT PHASE */}
-          {state === 'commitment' && (
-              <div className="w-full max-w-md space-y-8 animate-fade-in-up px-6 text-center">
-                  <div>
-                      <h2 className="text-3xl font-bold text-white mb-2 font-header tracking-wide">Ready to Focus?</h2>
-                      <p className="text-gray-400">Set an intention for this {minutes} minute session.</p>
-                  </div>
-                  
-                  <div className="space-y-4">
-                      <div className="text-left">
-                          <label className="block text-xs font-bold text-falcon-gold uppercase tracking-wider mb-2">I am working on...</label>
-                          <input 
-                              ref={taskInputRef}
-                              type="text" 
-                              value={taskName}
-                              onChange={(e) => setTaskName(e.target.value)}
-                              onKeyDown={(e) => e.key === 'Enter' && handleCommit()}
-                              placeholder="e.g., Biology Lab Report"
-                              className="w-full bg-white/5 border-b-2 border-white/20 focus:border-falcon-gold text-2xl py-2 text-white placeholder-gray-600 outline-none transition-colors text-center"
-                          />
+          {/* Scrollable Body */}
+          <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth">
+              <div ref={topRef} className="h-0 w-full" />
+              {/* Main Content */}
+              <div className="flex flex-col items-center px-4 md:px-8 pt-6 pb-10">
+                  <div className="w-full max-w-5xl flex flex-col lg:flex-row gap-8 items-center lg:items-start">
+                      {/* Timer Card */}
+                      <div className="w-full lg:w-[55%] rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.7)]">
+                      <div className="flex items-center justify-between mb-6">
+                          <span className="text-xs font-bold uppercase tracking-widest text-falcon-gold">Focus Timer</span>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">
+                              {state === 'running' ? 'In Session' : state === 'paused' ? 'Paused' : state === 'completed' ? 'Complete' : 'Ready'}
+                          </span>
                       </div>
-                      <div className="text-left opacity-60 hover:opacity-100 transition-opacity">
-                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">If I get distracted I will...</label>
-                          <input 
-                              type="text" 
-                              value={distractionRule}
-                              onChange={(e) => setDistractionRule(e.target.value)}
-                              className="w-full bg-transparent border-b border-white/10 text-sm py-1 text-gray-300 focus:border-white/40 outline-none transition-colors"
-                          />
-                      </div>
-                  </div>
 
-                  <button 
-                      onClick={handleCommit}
-                      disabled={!taskName.trim()}
-                      className="magnetic-btn mt-8 px-12 py-4 bg-falcon-green text-white font-bold rounded-full shadow-[0_0_20px_rgba(27,59,47,0.4)] hover:bg-[#234a3b] hover:scale-105 disabled:opacity-50 disabled:scale-100 transition-all"
-                  >
-                      Start Session
-                  </button>
-              </div>
-          )}
+                      {(state === 'setup' || state === 'running' || state === 'paused') && (
+                          <div className="flex flex-col items-center">
+                              {state !== 'setup' && (
+                                  <div className="mb-6 text-center">
+                                      <h3 className="text-xl font-bold text-white/90">{taskName || 'Focus Session'}</h3>
+                                      <p className="text-xs text-falcon-gold font-bold uppercase tracking-widest mt-1">
+                                          {state === 'paused' ? 'Session Paused' : 'Focusing'}
+                                      </p>
+                                  </div>
+                              )}
 
-          {/* TIMER / SETUP / RUNNING PHASE */}
-          {(state === 'setup' || state === 'running' || state === 'paused') && (
-              <div className="flex flex-col items-center">
-                  
-                  {/* Task Label (Running) */}
-                  {state !== 'setup' && (
-                      <div className="mb-8 text-center animate-fade-in">
-                          <h3 className="text-xl font-bold text-white/90">{taskName}</h3>
-                          <p className="text-xs text-falcon-gold font-bold uppercase tracking-widest mt-1">
-                              {state === 'paused' ? 'SESSION PAUSED' : 'FOCUSING'}
-                          </p>
-                      </div>
-                  )}
+                              <div 
+                                  ref={dialRef}
+                                  className={`relative w-[300px] h-[300px] md:w-[380px] md:h-[380px] rounded-full shadow-[0_20px_50px_-10px_rgba(0,0,0,0.5)] select-none ${state === 'setup' ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                                  onMouseDown={handleStart}
+                                  onTouchStart={handleStart}
+                              >
+                                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 p-[2px] shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]">
+                                      <div className="w-full h-full rounded-full bg-[#151b26] relative overflow-hidden">
+                                          {Array.from({ length: 12 }).map((_, i) => (
+                                              <div 
+                                                  key={i} 
+                                                  className="absolute top-0 left-1/2 w-[2px] h-[12px] bg-white/20 -ml-[1px] origin-[50%_190px]"
+                                                  style={{ transform: `rotate(${i * 30}deg) translateY(10px)` }}
+                                              />
+                                          ))}
 
-                  {/* 3D DIAL */}
-                  <div 
-                      ref={dialRef}
-                      className={`relative w-[340px] h-[340px] md:w-[420px] md:h-[420px] rounded-full shadow-[0_20px_50px_-10px_rgba(0,0,0,0.5)] select-none ${state === 'setup' ? 'cursor-grab active:cursor-grabbing' : ''}`}
-                      onMouseDown={handleStart}
-                      onTouchStart={handleStart}
-                  >
-                      {/* Outer Rim (Brushed Metal) */}
-                      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 p-[2px] shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]">
-                          <div className="w-full h-full rounded-full bg-[#151b26] relative overflow-hidden">
-                              
-                              {/* Markers (Calmer: 12 hour marks only) */}
-                              {Array.from({ length: 12 }).map((_, i) => (
-                                  <div 
-                                      key={i} 
-                                      className="absolute top-0 left-1/2 w-[2px] h-[12px] bg-white/20 -ml-[1px] origin-[50%_210px]"
-                                      style={{ transform: `rotate(${i * 30}deg) translateY(10px)` }}
-                                  />
-                              ))}
+                                          <svg className="absolute inset-0 w-full h-full rotate-0 pointer-events-none transform transition-all duration-500 ease-linear" viewBox="0 0 400 400">
+                                              <circle cx="200" cy="200" r="180" fill="#1a2230" />
+                                              <path 
+                                                  d={calculateArc(visualPercentage)} 
+                                                  fill={state === 'setup' ? '#EAB308' : '#10B981'} 
+                                                  fillOpacity="0.8"
+                                                  style={{ filter: 'drop-shadow(0 0 10px rgba(16, 185, 129, 0.2))' }}
+                                              />
+                                          </svg>
 
-                              {/* Time Timer Wedge (SVG) */}
-                              <svg className="absolute inset-0 w-full h-full rotate-0 pointer-events-none transform transition-all duration-500 ease-linear" viewBox="0 0 400 400">
-                                  {/* Background Track */}
-                                  <circle cx="200" cy="200" r="180" fill="#1a2230" />
-                                  
-                                  {/* Dynamic Wedge */}
-                                  <path 
-                                      d={calculateArc(visualPercentage)} 
-                                      fill={state === 'setup' ? '#EAB308' : '#10B981'} 
-                                      fillOpacity="0.8"
-                                      style={{ filter: 'drop-shadow(0 0 10px rgba(16, 185, 129, 0.2))' }}
-                                  />
-                              </svg>
-
-                              {/* Glass Cover */}
-                              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
-                              
-                              {/* Center Readout */}
-                              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                  <div className="text-center">
-                                      <div className={`font-mono font-bold text-white tracking-tighter drop-shadow-md transition-all duration-300 ${state === 'setup' ? 'text-7xl' : 'text-6xl'}`}>
-                                          {formatTime(state === 'setup' ? minutes * 60 : secondsRemaining)}
+                                          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
+                                          
+                                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                              <div className="text-center">
+                                                  <div className={`font-mono font-bold text-white tracking-tighter drop-shadow-md transition-all duration-300 ${state === 'setup' ? 'text-6xl' : 'text-5xl'}`}>
+                                                      {formatTime(state === 'setup' ? Math.round(minutes * 60) : secondsRemaining)}
+                                                  </div>
+                                                  {state === 'setup' && (
+                                                      <div className="text-[10px] text-gray-400 uppercase tracking-[0.2em] mt-2">Drag to set time</div>
+                                                  )}
+                                              </div>
+                                          </div>
                                       </div>
-                                      {state === 'setup' && (
-                                          <div className="text-[10px] text-gray-400 uppercase tracking-[0.2em] mt-2">Drag Dial</div>
-                                      )}
+                                  </div>
+                              </div>
+
+                              {isBreathingCueEnabled && state === 'running' && (
+                                  <div className="mt-4 text-[11px] uppercase tracking-[0.3em] text-white/70 animate-breathe">
+                                      Breathe In · Breathe Out
+                                  </div>
+                              )}
+
+                              <div className="mt-8 h-14 flex items-center justify-center">
+                                  {state === 'setup' && (
+                                      <button 
+                                         onClick={startSession}
+                                         className="magnetic-btn px-10 py-3 bg-white text-black font-bold rounded-full hover:scale-105 hover:bg-falcon-gold transition-all shadow-lg"
+                                      >
+                                          Start Focus
+                                      </button>
+                                  )}
+
+                                  {(state === 'running' || state === 'paused') && (
+                                      <div className="flex gap-4">
+                                          <button 
+                                             onClick={() => {
+                                                 setState(state === 'running' ? 'paused' : 'running');
+                                                 triggerSound('press');
+                                             }}
+                                             className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white border border-white/10 transition-all"
+                                          >
+                                              {state === 'running' ? (
+                                                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
+                                              ) : (
+                                                  <svg className="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                                              )}
+                                          </button>
+                                          
+                                          <button 
+                                              onClick={() => { setIsParkingLotOpen(true); triggerSound('press'); }}
+                                              className="h-12 px-5 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center gap-2 text-xs font-bold transition-all"
+                                              title="Press 'D'"
+                                          >
+                                              <span>🧠</span> Capture Distraction
+                                          </button>
+
+                                          {state === 'paused' && (
+                                              <button 
+                                                 onClick={() => { setState('setup'); triggerSound('press'); }}
+                                                 className="h-12 px-5 rounded-full bg-red-500/20 text-red-200 hover:bg-red-500/30 border border-red-500/30 text-xs font-bold transition-all"
+                                              >
+                                                  End
+                                              </button>
+                                          )}
+                                      </div>
+                                  )}
+                              </div>
+                          </div>
+                      )}
+
+                      {state === 'completed' && (
+                          <div className="max-w-md w-full mx-auto animate-fade-in-up">
+                              <div className="text-center mb-8">
+                                  <div className="text-5xl mb-4">🎉</div>
+                                  <h2 className="text-2xl font-bold text-white mb-2">Session Complete</h2>
+                                  <p className="text-gray-400">You focused on "{taskName}" for {Math.max(1, Math.floor(minutes))} minutes.</p>
+                              </div>
+
+                              {parkingLotItems.length > 0 && (
+                                  <div className="bg-white/5 rounded-xl border border-white/10 p-6 mb-8">
+                                      <h3 className="text-xs font-bold text-falcon-gold uppercase tracking-wider mb-4 flex items-center gap-2">
+                                          <span>🧠</span> Parking Lot Items
+                                      </h3>
+                                      <ul className="space-y-3">
+                                          {parkingLotItems.map((item, idx) => (
+                                              <li key={idx} className="flex justify-between items-start text-sm border-b border-white/5 pb-2 last:border-0">
+                                                  <span className="text-gray-200">{item.text}</span>
+                                                  <span className="text-gray-500 text-xs ml-4">{item.time.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                                              </li>
+                                          ))}
+                                      </ul>
+                                  </div>
+                              )}
+
+                              <div className="flex justify-center gap-4">
+                                  <button 
+                                      onClick={() => { 
+                                          setState('setup'); 
+                                          setParkingLotItems([]); 
+                                          triggerSound('press');
+                                      }}
+                                      className="px-8 py-3 bg-falcon-green text-white font-bold rounded-lg hover:bg-[#1a382e] transition-colors"
+                                  >
+                                      New Session
+                                  </button>
+                                  <button 
+                                      onClick={onExit}
+                                      className="px-8 py-3 border border-white/10 text-gray-300 font-bold rounded-lg hover:bg-white/5 transition-colors"
+                                  >
+                                      Exit
+                                  </button>
+                              </div>
+                          </div>
+                      )}
+                      </div>
+
+                      {/* Session Controls */}
+                      <div className="w-full lg:w-[45%]">
+                          <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-lg p-5 space-y-4">
+                              <div className="flex items-center justify-between">
+                                  <span className="text-xs font-bold uppercase tracking-widest text-falcon-gold">Session</span>
+                                  <span className="text-[10px] text-white/60">{formatTime(Math.round(minutes * 60))}</span>
+                              </div>
+                              <input 
+                                  ref={taskInputRef}
+                                  type="text" 
+                                  value={taskName}
+                                  onChange={(e) => setTaskName(e.target.value)}
+                                  onKeyDown={(e) => e.key === 'Enter' && state === 'setup' && startSession()}
+                                  placeholder="What are you working on?"
+                                  disabled={state !== 'setup'}
+                                  className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white placeholder-gray-500 focus:border-falcon-gold outline-none text-sm disabled:opacity-60"
+                              />
+
+                              <div className="grid grid-cols-2 gap-2">
+                                  <button
+                                      onClick={() => { setIsCalmMode(!isCalmMode); triggerSound('press'); }}
+                                      className={`px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border ${isCalmMode ? 'bg-white/10 border-white/20 text-white' : 'border-gray-700 text-gray-400'}`}
+                                  >
+                                      Calm Mode
+                                  </button>
+                                  <button
+                                      onClick={() => { setIsBreathingCueEnabled(!isBreathingCueEnabled); triggerSound('press'); }}
+                                      className={`px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border ${isBreathingCueEnabled ? 'bg-white/10 border-white/20 text-white' : 'border-gray-700 text-gray-400'}`}
+                                  >
+                                      Breathing Cue
+                                  </button>
+                              </div>
+
+                              <div className="space-y-3">
+                                  <div className="flex items-center justify-between">
+                                      <span className="text-xs text-white/70">Sound Effects</span>
+                                      <button
+                                          onClick={() => { 
+                                              if (!isSoundEnabled && audioCtxRef.current) playSound('press', audioCtxRef.current);
+                                              setIsSoundEnabled(!isSoundEnabled);
+                                          }}
+                                          className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${isSoundEnabled ? 'border-falcon-gold/40 text-falcon-gold bg-white/5' : 'border-white/10 text-gray-400'}`}
+                                      >
+                                          {isSoundEnabled ? 'On' : 'Off'}
+                                      </button>
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                      <span className="text-xs text-white/70">Cafe Ambience</span>
+                                      <button
+                                          onClick={() => { setIsAmbienceEnabled(!isAmbienceEnabled); triggerSound('press'); }}
+                                          className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${isAmbienceEnabled ? 'border-falcon-gold/40 text-falcon-gold bg-white/5' : 'border-white/10 text-gray-400'}`}
+                                      >
+                                          {isAmbienceEnabled ? 'On' : 'Off'}
+                                      </button>
+                                  </div>
+                                  <input 
+                                      type="range" 
+                                      min="0" 
+                                      max="0.3" 
+                                      step="0.01"
+                                      value={ambienceLevel}
+                                      onChange={(e) => setAmbienceLevel(Number(e.target.value))}
+                                      className="w-full accent-falcon-gold"
+                                  />
+                              </div>
+
+                              <div>
+                                  <span className="text-xs text-white/70">Background</span>
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                      {(['calm', 'forest', 'dusk'] as const).map((mode) => (
+                                          <button
+                                              key={mode}
+                                              onClick={() => { setBackgroundMode(mode); triggerSound('press'); }}
+                                              className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
+                                                  backgroundMode === mode ? 'border-falcon-gold/40 text-falcon-gold bg-white/5' : 'border-white/10 text-gray-400'
+                                              }`}
+                                          >
+                                              {mode}
+                                          </button>
+                                      ))}
+                                  </div>
+                              </div>
+                              <p className="text-[11px] text-white/60">Timebox + single-tasking keeps focus steady.</p>
+                          </div>
+                          <div className="mt-4">
+                              <SpotifyPlayer />
+                          </div>
+                      </div>
+                  </div>
+              </div>
+
+              {/* AI Dock */}
+              <div ref={aiDockRef} className="sticky bottom-0 w-full pb-6 pt-2 z-20">
+                  <div className="bg-gradient-to-t from-[#0B1310]/90 via-[#0B1310]/70 to-transparent backdrop-blur-xl">
+                      <div className="mx-auto w-full max-w-5xl px-4 md:px-8">
+                          <div className={`overflow-hidden transition-[max-height,opacity,transform] duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${isAIExpanded ? 'max-h-[45vh] opacity-100 translate-y-0 pointer-events-auto' : 'max-h-0 opacity-0 translate-y-4 pointer-events-none'}`}>
+                              <div className="h-[40vh] min-h-[220px] rounded-3xl border border-white/10 bg-white/5 backdrop-blur-lg overflow-hidden shadow-[0_18px_40px_-30px_rgba(0,0,0,0.6)]">
+                                  <div className="relative h-full dark">
+                                      <button
+                                          onClick={handleCollapseAI}
+                                          className="absolute right-3 top-3 z-10 text-[10px] uppercase tracking-widest font-bold text-white/60 hover:text-white bg-black/30 border border-white/10 px-3 py-1 rounded-full"
+                                      >
+                                          Push Down
+                                      </button>
+                                      <ChatPanel 
+                                          messages={currentSession?.messages || []}
+                                          isLoading={isSending}
+                                          userProfile={userProfile}
+                                          onSignInRequest={onSignIn}
+                                      />
                                   </div>
                               </div>
                           </div>
                       </div>
-                  </div>
 
-                  {/* Controls */}
-                  <div className="mt-12 h-16 flex items-center justify-center">
-                      {state === 'setup' && (
-                          <button 
-                             onClick={() => setState('commitment')}
-                             className="magnetic-btn px-10 py-3 bg-white text-black font-bold rounded-full hover:scale-105 hover:bg-falcon-gold transition-all shadow-lg"
-                          >
-                              Next
-                          </button>
-                      )}
-
-                      {(state === 'running' || state === 'paused') && (
-                          <div className="flex gap-4">
-                              <button 
-                                 onClick={() => {
-                                     setState(state === 'running' ? 'paused' : 'running');
-                                     triggerSound('press');
-                                 }}
-                                 className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white border border-white/10 transition-all"
-                              >
-                                  {state === 'running' ? (
-                                      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
-                                  ) : (
-                                      <svg className="w-6 h-6 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                                  )}
-                              </button>
-                              
-                              <button 
-                                  onClick={() => { setIsParkingLotOpen(true); triggerSound('press'); }}
-                                  className="h-14 px-6 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center gap-2 text-sm font-bold transition-all"
-                                  title="Press 'D'"
-                              >
-                                  <span>🧠</span> Parking Lot
-                              </button>
-
-                              {state === 'paused' && (
-                                  <button 
-                                     onClick={() => { setState('setup'); triggerSound('press'); }}
-                                     className="h-14 px-6 rounded-full bg-red-500/20 text-red-200 hover:bg-red-500/30 border border-red-500/30 text-sm font-bold transition-all"
-                                  >
-                                      End
-                                  </button>
-                              )}
-                          </div>
-                      )}
-                  </div>
-              </div>
-          )}
-
-          {/* COMPLETED PHASE */}
-          {state === 'completed' && (
-              <div className="max-w-md w-full px-6 animate-fade-in-up">
-                  <div className="text-center mb-8">
-                      <div className="text-6xl mb-4">🎉</div>
-                      <h2 className="text-3xl font-bold text-white mb-2">Session Complete</h2>
-                      <p className="text-gray-400">You focused on "{taskName}" for {minutes} minutes.</p>
-                  </div>
-
-                  {/* Parking Lot Review */}
-                  {parkingLotItems.length > 0 && (
-                      <div className="bg-white/5 rounded-xl border border-white/10 p-6 mb-8">
-                          <h3 className="text-xs font-bold text-falcon-gold uppercase tracking-wider mb-4 flex items-center gap-2">
-                              <span>🧠</span> Parking Lot Items
-                          </h3>
-                          <ul className="space-y-3">
-                              {parkingLotItems.map((item, idx) => (
-                                  <li key={idx} className="flex justify-between items-start text-sm border-b border-white/5 pb-2 last:border-0">
-                                      <span className="text-gray-200">{item.text}</span>
-                                      <span className="text-gray-500 text-xs ml-4">{item.time.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                                  </li>
-                              ))}
-                          </ul>
+                      <div className="mt-3 px-4 md:px-8">
+                          <AIQuickBar 
+                              onSearch={onSearch}
+                              onOpenChat={() => {}}
+                              onExpandChange={(expanded) => {
+                                  if (expanded) setIsAIExpanded(true);
+                              }}
+                              hideChips={true}
+                          />
                       </div>
-                  )}
-
-                  <div className="flex justify-center gap-4">
-                      <button 
-                          onClick={() => { 
-                              setState('setup'); 
-                              setParkingLotItems([]); 
-                              triggerSound('press');
-                          }}
-                          className="px-8 py-3 bg-falcon-green text-white font-bold rounded-lg hover:bg-[#1a382e] transition-colors"
-                      >
-                          New Session
-                      </button>
-                      <button 
-                          onClick={onExit}
-                          className="px-8 py-3 border border-white/10 text-gray-300 font-bold rounded-lg hover:bg-white/5 transition-colors"
-                      >
-                          Exit
-                      </button>
                   </div>
               </div>
-          )}
+          </div>
       </div>
 
       {/* 4. Parking Lot Modal (Overlay) */}
@@ -660,77 +853,29 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
           </div>
       )}
 
-      {/* 5. PORTALED AI: Launcher & Drawer */}
-      {/* This ensures AI UI is NEVER clipped by the Focus Overlay's overflow:hidden */}
-      {createPortal(
-          <div className="font-sans text-gray-900 dark:text-gray-100">
-              {/* Launcher - Only show if drawer closed */}
-              {!isDrawerOpen && isActive && (
-                  <button 
-                      onClick={() => { setIsDrawerOpen(true); triggerSound('press'); }}
-                      className="fixed z-[99999] group flex items-center gap-2 bg-[#1B3B2F] hover:bg-[#152e24] text-white border border-white/10 shadow-2xl rounded-full pl-3 pr-5 py-3 transition-all transform hover:scale-105 active:scale-95"
-                      style={{ 
-                          right: 'max(24px, env(safe-area-inset-right) + 24px)', 
-                          bottom: 'max(24px, env(safe-area-inset-bottom) + 24px)' 
-                      }}
-                  >
-                      <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm">🦅</div>
-                      <div className="text-left">
-                          <div className="text-[10px] text-falcon-gold font-bold uppercase leading-none">Need Help?</div>
-                          <div className="text-sm font-bold leading-none mt-0.5">Ask AI</div>
-                      </div>
-                  </button>
-              )}
-
-              {/* Drawer */}
-              {isDrawerOpen && isActive && (
-                  <>
-                      {/* Backdrop */}
-                      <div 
-                          className="fixed inset-0 z-[99998] bg-black/20 backdrop-blur-[1px]" 
-                          onClick={() => setIsDrawerOpen(false)}
-                      />
-                      
-                      {/* Panel */}
-                      <div className="fixed top-0 right-0 bottom-0 z-[99999] w-full md:w-[450px] bg-white dark:bg-gray-900 shadow-2xl flex flex-col border-l border-gray-200 dark:border-white/10 animate-slide-in-right">
-                          <div className="p-4 border-b border-gray-100 dark:border-white/10 flex justify-between items-center bg-gray-50 dark:bg-black/20">
-                              <h3 className="font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                                  <span>🦅</span> BFHS Help
-                              </h3>
-                              <button onClick={() => setIsDrawerOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white p-2">✕</button>
-                          </div>
-                          
-                          <div className="flex-1 overflow-hidden relative flex flex-col">
-                              <ChatPanel 
-                                  messages={currentSession?.messages || []}
-                                  isLoading={isSending}
-                                  userProfile={userProfile}
-                                  onSignInRequest={onSignIn}
-                              />
-                          </div>
-
-                          <div className="p-4 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-black/20">
-                              <AIQuickBar 
-                                  onSearch={onSearch} 
-                                  docked={true}
-                                  onOpenChat={() => {}} // No-op
-                              />
-                          </div>
-                      </div>
-                  </>
-              )}
-          </div>,
-          document.body
-      )}
-
-      {/* Keyframe Styles for Portal Animation (inline for simplicity in this context) */}
       <style>{`
-          @keyframes slideInRight {
-              from { transform: translateX(100%); }
-              to { transform: translateX(0); }
+          @keyframes focusOrb {
+              0% { transform: translate3d(0, 0, 0) scale(1); }
+              50% { transform: translate3d(-20px, -30px, 0) scale(1.05); }
+              100% { transform: translate3d(0, 0, 0) scale(1); }
           }
-          .animate-slide-in-right {
-              animation: slideInRight 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+          @keyframes focusOrbSlow {
+              0% { transform: translate3d(0, 0, 0) scale(1); }
+              50% { transform: translate3d(30px, 20px, 0) scale(1.08); }
+              100% { transform: translate3d(0, 0, 0) scale(1); }
+          }
+          @keyframes breathe {
+              0%, 100% { opacity: 0.6; transform: scale(0.98); }
+              50% { opacity: 1; transform: scale(1.02); }
+          }
+          .animate-focus-orb {
+              animation: focusOrb 18s ease-in-out infinite;
+          }
+          .animate-focus-orb-slow {
+              animation: focusOrbSlow 24s ease-in-out infinite;
+          }
+          .animate-breathe {
+              animation: breathe 6s ease-in-out infinite;
           }
       `}</style>
 

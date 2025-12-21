@@ -25,35 +25,48 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <header className={`w-full bg-gradient-to-b from-[#1B3B2F] to-[#163127] text-white relative shadow-md z-10 transition-all duration-700 ease-[cubic-bezier(0.25,0.8,0.25,1)] ${compact ? 'pb-1 pt-1' : 'pb-2 pt-2'}`}>
       {/* Top utility bar */}
-      <div className={`container mx-auto px-4 mb-0 flex flex-col md:flex-row justify-between items-center text-xs md:text-sm text-white/90 font-medium tracking-wide gap-1 transition-all duration-700 ${compact ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100 h-auto'}`}>
+      <div className={`container mx-auto px-4 mb-0 flex flex-col md:flex-row justify-between items-center text-xs md:text-sm text-white/90 font-medium tracking-wide gap-1 transition-all duration-700 ${compact ? 'opacity-100 h-auto py-1' : 'opacity-100 h-auto'}`}>
         
         {/* Left: Ticker & Status */}
         <div className="flex items-center space-x-4 w-full md:w-auto justify-between md:justify-start">
-            <div className="flex items-center space-x-2 opacity-80 hover:opacity-100 transition-opacity duration-150 cursor-default">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                <span className="hidden sm:inline">BFHS Internal</span>
-            </div>
-            <div className="hidden sm:block">
+            {compact ? (
+                <div className="flex items-center gap-2 opacity-90">
+                    <div className="w-6 h-6 rounded-full bg-white/10 border border-white/10 flex items-center justify-center">
+                        <img 
+                            src="https://static.wixstatic.com/media/e6bdc9_9e876e6d3ee44a9e860f83e8afc9774a~mv2.png/v1/fill/w_208,h_200,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Primary%20Logo%20in%20white%20no%20TEXT.png"
+                            alt="BFHS Internal"
+                            className="w-4 h-4 object-contain"
+                        />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest">BFHS Internal</span>
+                </div>
+            ) : (
+                <div className="flex items-center space-x-2 opacity-80 hover:opacity-100 transition-opacity duration-150 cursor-default">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                    <span className="hidden sm:inline">BFHS Internal</span>
+                </div>
+            )}
+            <div className={`${compact ? 'block' : 'hidden sm:block'}`}>
                <DayTicker userProfile={userProfile} />
             </div>
-             {/* Mobile Ticker */}
-             <div className="sm:hidden">
-               <DayTicker userProfile={userProfile} />
-            </div>
+            {!compact && (
+                <div className="sm:hidden">
+                    <DayTicker userProfile={userProfile} />
+                </div>
+            )}
         </div>
         
         {/* Right: Controls */}
         <div className="flex items-center space-x-2 shrink-0">
-            {/* Focus Mode Pill Button */}
-            {onToggleFocus && (
+            {/* Focus Studio Button */}
+            {onToggleFocus && !compact && (
                 <button
                     onClick={onToggleFocus}
-                    className="group relative flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-300 overflow-hidden"
-                    title="Enter Focus Mode"
+                    className="group relative flex items-center gap-2 px-4 py-1.5 rounded-full bg-[linear-gradient(120deg,#1B3B2F,#214639)] border border-falcon-gold/30 text-falcon-gold shadow-[0_8px_24px_-16px_rgba(0,0,0,0.8)] hover:brightness-110 transition-all duration-300 overflow-hidden"
+                    title="Open Focus Studio"
                 >
-                    <div className="absolute inset-0 bg-falcon-gold/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                    <div className="w-2 h-2 rounded-full bg-falcon-gold shadow-[0_0_8px_rgba(234,179,8,0.8)] animate-pulse"></div>
-                    <span className="relative text-xs font-bold uppercase tracking-wider text-white group-hover:text-falcon-gold transition-colors">Focus</span>
+                    <span className="text-xs font-black uppercase tracking-[0.2em]">Focus Studio</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-falcon-gold shadow-[0_0_10px_rgba(234,179,8,0.7)] animate-pulse"></span>
                 </button>
             )}
 
@@ -78,10 +91,10 @@ const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Main Logo Area */}
-      <div className={`container mx-auto px-4 flex flex-col items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.25,0.8,0.25,1)] overflow-hidden ${compact ? 'pb-0' : 'pb-1'} ${compact ? 'max-h-16' : 'max-h-60'}`}>
+      <div className={`container mx-auto px-4 flex flex-col items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.25,0.8,0.25,1)] overflow-hidden ${compact ? 'pb-0 pt-0' : 'pb-0 pt-1 md:pt-2'} ${compact ? 'max-h-25' : 'max-h-52'}`}>
         <div className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4">
             {/* Logo */}
-            <div className={`shrink-0 flex items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.25,0.8,0.25,1)] ${compact ? 'w-12 h-12 md:w-16 md:h-16' : 'w-40 h-40 md:w-85 md:h-85'}`}>
+            <div className={`shrink-0 flex items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.25,0.8,0.25,1)] ${compact ? 'w-20 h-20 md:w-24 md:h-24' : 'w-40 h-40 md:w-85 md:h-85'}`}>
                 <img 
                     src="https://static.wixstatic.com/media/e6bdc9_9e876e6d3ee44a9e860f83e8afc9774a~mv2.png/v1/fill/w_208,h_200,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Primary%20Logo%20in%20white%20no%20TEXT.png" 
                     alt="Benjamin Franklin High School Official Logo" 
