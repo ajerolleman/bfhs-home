@@ -270,14 +270,14 @@ const App: React.FC = () => {
                             >
                                 {isHomeSpotifyVisible ? 'Hide Spotify' : 'Show Spotify'}
                             </button>
-                            <div className="w-full max-w-[1200px]">
-                                <Slides />
-                            </div>
                             {isHomeSpotifyVisible && (
-                                <div className="mt-3">
+                                <div className="mt-2">
                                     <SpotifyPlayer className="w-full" tone="light" />
                                 </div>
                             )}
+                            <div className={`w-full max-w-[1200px] ${isHomeSpotifyVisible ? 'mt-4' : 'mt-1'}`}>
+                                <Slides />
+                            </div>
                         </div>
                     )}
                     {!spotifyToken && (
