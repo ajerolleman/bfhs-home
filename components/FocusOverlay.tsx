@@ -488,14 +488,14 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                       <div className="font-mono font-bold text-white tracking-tight text-2xl md:text-3xl">
                           {formatTime(secondsRemaining)}
                       </div>
-                      <div className="mt-2 w-[200px] md:w-[260px] mx-auto">
-                          <div className="relative rounded-full bg-white/15 overflow-hidden h-2.5">
-                              <div
-                                  className="absolute inset-y-0 left-0 bg-emerald-400/90 transition-[width] duration-500 ease-out"
-                                  style={{ width: `${Math.max(0, (1 - runningProgress)) * 100}%` }}
-                              />
+                          <div className="mt-2 w-[200px] md:w-[260px] mx-auto">
+                              <div className="relative rounded-full bg-white/15 overflow-hidden h-2.5">
+                                  <div
+                                      className="absolute inset-y-0 left-0 bg-emerald-400/90 transition-[width] duration-500 ease-out"
+                                      style={{ width: `${Math.max(0, runningProgress) * 100}%` }}
+                                  />
+                              </div>
                           </div>
-                      </div>
                   </div>
               )}
 
@@ -545,7 +545,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
               >
                   {showCenteredTimer && (
                       <div
-                          className="absolute inset-0 z-[110] pointer-events-none transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] flex items-center justify-center"
+                          className="absolute inset-x-0 top-[42%] -translate-y-1/2 z-[110] pointer-events-none transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] flex items-center justify-center"
                       >
                           <div className="text-center">
                               <div className={`font-mono font-bold text-white tracking-tight ${
@@ -554,12 +554,12 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                   {formatTime(secondsRemaining)}
                               </div>
                               <div className={`mt-4 ${
-                                  'w-[280px] md:w-[420px]'
+                                  'w-[320px] md:w-[520px]'
                               } mx-auto`}>
-                                  <div className="relative rounded-full bg-white/15 overflow-hidden h-4 md:h-5">
+                                  <div className="relative rounded-full bg-white/15 overflow-hidden h-5 md:h-6">
                                       <div
                                           className="absolute inset-y-0 left-0 bg-emerald-400/90 transition-[width] duration-500 ease-out"
-                                          style={{ width: `${Math.max(0, (1 - runningProgress)) * 100}%` }}
+                                          style={{ width: `${Math.max(0, runningProgress) * 100}%` }}
                                       />
                                   </div>
                               </div>
