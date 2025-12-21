@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import SpotifyWebPlayback from 'react-spotify-web-playback';
 import { getSpotifyLoginUrl, initSpotifyAuth, clearSpotifyAuth } from '../services/authService';
 
@@ -20,6 +20,10 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris = DEFAULT_URIS, clas
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [selectedPlaylistId, setSelectedPlaylistId] = useState(PLAYLISTS[0].id);
     const [activeUris, setActiveUris] = useState<string[]>(uris);
+    const [selectedLabel, setSelectedLabel] = useState(PLAYLISTS[0].label);
+    const [userPlaylists, setUserPlaylists] = useState<{ id: string; name: string; uri: string }[]>([]);
+    const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
+    const [playlistError, setPlaylistError] = useState<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -38,15 +42,38 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris = DEFAULT_URIS, clas
         return () => document.removeEventListener('mousedown', handleOutside);
     }, [isMenuOpen]);
 
-    const selectedPlaylist = useMemo(
-        () => PLAYLISTS.find((item) => item.id === selectedPlaylistId) || PLAYLISTS[0],
-        [selectedPlaylistId]
-    );
-
     useEffect(() => {
         const nextToken = initSpotifyAuth();
         if (nextToken) setToken(nextToken);
     }, []);
+
+    useEffect(() => {
+        if (!token) return;
+        setIsLoadingPlaylists(true);
+        setPlaylistError(null);
+        fetch('https://api.spotify.com/v1/me/playlists?limit=8', {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+            .then((res) => {
+                if (!res.ok) throw new Error('playlists_error');
+                return res.json();
+            })
+            .then((data) => {
+                const items = Array.isArray(data?.items) ? data.items : [];
+                const cleaned = items
+                    .filter((item: any) => item && item.id && item.name && item.uri)
+                    .map((item: any) => ({
+                        id: String(item.id),
+                        name: String(item.name),
+                        uri: String(item.uri)
+                    }));
+                setUserPlaylists(cleaned);
+            })
+            .catch(() => {
+                setPlaylistError('Unable to load your playlists.');
+            })
+            .finally(() => setIsLoadingPlaylists(false));
+    }, [token]);
 
     if (!token) {
         return (
@@ -76,7 +103,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris = DEFAULT_URIS, clas
                     >
                         {isMenuOpen ? 'Close Mixes' : 'Pull Up Mixes'}
                     </button>
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-white/50">{selectedPlaylist.label}</span>
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-white/50">{selectedLabel}</span>
                 </div>
                 <button
                     onClick={() => {
@@ -97,6 +124,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris = DEFAULT_URIS, clas
                             onClick={() => {
                                 setSelectedPlaylistId(playlist.id);
                                 setActiveUris(playlist.uris);
+                                setSelectedLabel(playlist.label);
                             }}
                             className={`px-3 py-2 rounded-full text-[10px] uppercase tracking-[0.2em] border transition ${
                                 selectedPlaylistId === playlist.id
@@ -107,12 +135,30 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris = DEFAULT_URIS, clas
                             {playlist.label}
                         </button>
                     ))}
+                    {userPlaylists.map((playlist) => (
+                        <button
+                            key={playlist.id}
+                            onClick={() => {
+                                setSelectedPlaylistId(`user:${playlist.id}`);
+                                setActiveUris([playlist.uri]);
+                                setSelectedLabel(playlist.name);
+                            }}
+                            className="px-3 py-2 rounded-full text-[10px] uppercase tracking-[0.2em] border border-white/10 text-white/60 hover:text-white hover:border-white/40 transition"
+                        >
+                            {playlist.name}
+                        </button>
+                    ))}
                     <button
                         onClick={() => window.open('https://open.spotify.com/dj', '_blank', 'noopener,noreferrer')}
                         className="px-3 py-2 rounded-full text-[10px] uppercase tracking-[0.2em] border border-white/10 text-white/60 hover:text-white hover:border-white/40 transition"
                     >
                         DJ Mode
                     </button>
+                </div>
+                <div className="mt-3 text-[10px] uppercase tracking-[0.2em] text-white/40">
+                    {isLoadingPlaylists && 'Loading your playlists...'}
+                    {!isLoadingPlaylists && playlistError && playlistError}
+                    {!isLoadingPlaylists && !playlistError && userPlaylists.length === 0 && 'No playlists found.'}
                 </div>
             </div>
 
