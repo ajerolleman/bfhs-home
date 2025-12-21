@@ -101,7 +101,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const [isSoundEnabled] = useState(true);
   const [isAmbienceEnabled, setIsAmbienceEnabled] = useState(false);
   const [ambienceLevel, setAmbienceLevel] = useState(0.14);
-  const [backgroundMode, setBackgroundMode] = useState<'calm' | 'forest' | 'dusk'>('calm');
+  const [backgroundMode] = useState<'calm' | 'forest' | 'dusk'>('dusk');
   const [isBreathingCueEnabled, setIsBreathingCueEnabled] = useState(false);
   
   // UI State
@@ -418,8 +418,8 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
 
   const maxTotalSeconds = 59 * 60 + 59;
   const setupTotalSeconds = Math.max(60, Math.min(maxTotalSeconds, Math.round(minutes * 60)));
-  const runningProgress = sessionTotalSeconds
-      ? Math.max(0, Math.min(1, 1 - secondsRemaining / sessionTotalSeconds))
+  const remainingRatio = sessionTotalSeconds
+      ? Math.max(0, Math.min(1, secondsRemaining / sessionTotalSeconds))
       : 0;
   const isFocusMode = state === 'running' || state === 'paused';
   const showHeaderTimer = isAIExpanded && isFocusMode;
@@ -515,8 +515,8 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                           <div className="mt-2 w-[200px] md:w-[260px] mx-auto">
                               <div className="relative rounded-full bg-white/15 overflow-hidden h-2.5">
                                   <div
-                                      className="absolute inset-y-0 left-0 bg-emerald-400/90 transition-[width] duration-500 ease-out"
-                                      style={{ width: `${Math.max(0, (1 - runningProgress)) * 100}%` }}
+                                      className="absolute inset-0 bg-emerald-400/90 origin-left transition-transform duration-300 ease-out"
+                                      style={{ transform: `scaleX(${remainingRatio})` }}
                                   />
                               </div>
                           </div>
@@ -524,28 +524,6 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
               )}
 
               <div className="flex items-center gap-3">
-                  <div className="hidden lg:flex items-center gap-2">
-                      <span className={`text-[10px] uppercase font-bold tracking-widest ${hasArtwork ? 'text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.7)]' : 'text-white/50'}`}>Background</span>
-                      <div className="flex items-center gap-2">
-                              {(['calm', 'forest', 'dusk'] as const).map((mode) => (
-                                  <button
-                                      key={mode}
-                                      onClick={() => { setBackgroundMode(mode); triggerSound('enable'); }}
-                                      className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-transform active:scale-95 ${
-                                          hasArtwork
-                                              ? backgroundMode === mode
-                                                  ? 'border-white text-white bg-white/20 shadow-[0_0_14px_rgba(255,255,255,0.7)]'
-                                                  : 'border-white text-white bg-white/12 shadow-[0_0_10px_rgba(255,255,255,0.45)]'
-                                              : backgroundMode === mode
-                                              ? 'border-falcon-gold/40 text-falcon-gold bg-white/5'
-                                              : 'border-white/40 text-white/70'
-                                      }`}
-                                  >
-                                  {mode}
-                              </button>
-                          ))}
-                      </div>
-                  </div>
                   <button 
                      onClick={onExit} 
                      className={`text-xs font-bold uppercase tracking-wider transition-colors ${hasArtwork ? 'text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.7)]' : 'text-gray-400 hover:text-white'}`}
@@ -588,8 +566,8 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                               } mx-auto`}>
                                   <div className="relative rounded-full bg-white/15 overflow-hidden h-5 md:h-6">
                                       <div
-                                          className="absolute inset-y-0 left-0 bg-emerald-400/90 transition-[width] duration-500 ease-out"
-                                          style={{ width: `${Math.max(0, (1 - runningProgress)) * 100}%` }}
+                                          className="absolute inset-0 bg-emerald-400/90 origin-left transition-transform duration-300 ease-out"
+                                          style={{ transform: `scaleX(${remainingRatio})` }}
                                       />
                                   </div>
                               </div>
@@ -733,8 +711,8 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                                       ) : (
                                                           <div className={`relative rounded-full bg-white/15 overflow-hidden ${isAIExpanded ? 'h-3 md:h-4' : 'h-8 md:h-10'}`}>
                                                               <div
-                                                                  className="absolute inset-y-0 left-0 bg-emerald-400/90 transition-[width] duration-500 ease-out"
-                                                                  style={{ width: `${Math.max(0, (1 - runningProgress)) * 100}%` }}
+                                                                  className="absolute inset-0 bg-emerald-400/90 origin-left transition-transform duration-300 ease-out"
+                                                                  style={{ transform: `scaleX(${remainingRatio})` }}
                                                               />
                                                           </div>
                                                       )}
