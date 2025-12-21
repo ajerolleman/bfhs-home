@@ -474,11 +474,11 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
           <div className={`flex-1 min-h-0 overflow-hidden flex flex-col transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${isAIExpanded ? 'pb-[48vh]' : 'pb-[28rem]'}`}>
               <div ref={topRef} className="h-0 w-full" />
               {/* Main Content */}
-              <div className={`w-full flex flex-col items-center px-4 md:px-8 pb-10 min-h-[calc(100vh-220px)] transform-gpu transition-transform duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${state === 'setup' ? 'justify-center pt-6' : 'justify-start pt-8 md:pt-10'} ${isAIExpanded ? 'scale-[0.97] -translate-y-4' : 'scale-100 translate-y-0'}`}>
-                  <div className="w-full max-w-6xl">
-                      <div className="w-full max-w-3xl mx-auto">
-                          <div className="flex flex-col items-center gap-4 text-center">
-                              {state === 'setup' ? (
+              <div className={`w-full flex flex-col items-center px-4 md:px-8 pb-10 min-h-[calc(100vh-220px)] transform-gpu transition-transform duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] justify-start pt-4 md:pt-6 ${isAIExpanded ? 'scale-[0.97] -translate-y-4' : 'scale-100 translate-y-0'}`}>
+                  <div className="w-full max-w-6xl flex flex-col flex-1">
+                      {state === 'setup' && (
+                          <div className="w-full">
+                              <div className="w-full max-w-3xl mx-auto flex flex-col items-center gap-3 text-center">
                                   <div className="w-full max-w-2xl">
                                       <input 
                                           ref={taskInputRef}
@@ -491,136 +491,139 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                           className="w-full bg-black/30 border border-white/10 rounded-full px-5 py-3 text-white placeholder-gray-500 focus:border-falcon-gold outline-none text-sm disabled:opacity-60"
                                       />
                                   </div>
-                              ) : (
-                                  <div className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-none">
-                                      {taskName || 'Focus Session'}
-                                  </div>
-                              )}
-
-                          <div className="flex flex-wrap items-center justify-center gap-3">
-                              {state === 'setup' && (
                                   <button 
                                      onClick={startSession}
                                      className="magnetic-btn px-10 py-3 bg-white text-black font-bold rounded-full hover:scale-105 hover:bg-falcon-gold active:scale-95 active:translate-y-[1px] transition-all shadow-lg"
                                   >
                                       Start Focus
                                   </button>
-                              )}
-
-                              {(state === 'running' || state === 'paused') && (
-                                  <>
-                                      <button 
-                                         onClick={() => {
-                                             setState(state === 'running' ? 'paused' : 'running');
-                                             triggerSound(state === 'running' ? 'disable' : 'enable');
-                                         }}
-                                         className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white border border-white/10 transition-all active:scale-95"
-                                      >
-                                          {state === 'running' ? (
-                                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
-                                          ) : (
-                                              <svg className="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                                          )}
-                                      </button>
-                                      
-                                      <button 
-                                          onClick={() => { setIsParkingLotOpen(true); triggerSound('enable'); }}
-                                          className="h-12 px-5 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center gap-2 text-xs font-bold transition-all active:scale-95"
-                                          title="Press 'D'"
-                                      >
-                                          <span>🧠</span> Capture Distraction
-                                      </button>
-
-                                      {state === 'paused' && (
-                                          <button 
-                                             onClick={() => { setState('setup'); triggerSound('disable'); }}
-                                             className="h-12 px-5 rounded-full bg-red-500/20 text-red-200 hover:bg-red-500/30 border border-red-500/30 text-xs font-bold transition-all active:scale-95"
-                                          >
-                                              End
-                                          </button>
-                                      )}
-                                  </>
-                              )}
-                          </div>
-
-                          <div className="flex flex-wrap items-center justify-center gap-2">
-                              <button
-                                  onClick={() => {
-                                      const next = !isCalmMode;
-                                      setIsCalmMode(next);
-                                      triggerSound(next ? 'enable' : 'disable');
-                                  }}
-                                  className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-transform active:scale-95 ${isCalmMode ? 'bg-white/10 border-white/20 text-white' : 'border-gray-700 text-gray-400'}`}
-                              >
-                                  Calm Mode
-                              </button>
-                              <button
-                                  onClick={() => {
-                                      const next = !isBreathingCueEnabled;
-                                      setIsBreathingCueEnabled(next);
-                                      triggerSound(next ? 'enable' : 'disable');
-                                  }}
-                                  className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-transform active:scale-95 ${isBreathingCueEnabled ? 'bg-white/10 border-white/20 text-white' : 'border-gray-700 text-gray-400'}`}
-                              >
-                                  Breathing Cue
-                              </button>
-                          </div>
-
-                          {isBreathingCueEnabled && state === 'running' && (
-                              <div className="text-[11px] uppercase tracking-[0.3em] text-white/70 animate-breathe">
-                                  Breathe In · Breathe Out
                               </div>
-                          )}
-                          
-                          {(state === 'setup' || state === 'running' || state === 'paused') && (
-                              <div className={`w-full max-w-3xl mt-6 transform-gpu transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] origin-top ${isAIExpanded ? 'scale-[0.72] -translate-y-10 opacity-90' : 'scale-100 translate-y-0'}`}>
-                                  <div className="text-center">
-                                      <div className={`font-mono font-bold text-white tracking-tighter drop-shadow-md transition-all duration-300 ${
-                                          isAIExpanded
-                                              ? 'text-5xl md:text-6xl'
-                                              : state === 'setup'
-                                              ? 'text-8xl md:text-9xl'
-                                              : 'text-7xl md:text-8xl'
-                                      }`}>
-                                          {formatTime(state === 'setup' ? setupTotalSeconds : secondsRemaining)}
+                          </div>
+                      )}
+
+                      <div className="flex-1 flex items-center justify-center">
+                          <div className="w-full max-w-3xl mx-auto">
+                              <div className="flex flex-col items-center gap-4 text-center">
+                                  {state !== 'setup' && (
+                                      <div className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-none">
+                                          {taskName || 'Focus Session'}
                                       </div>
-                                      <div className="text-[10px] text-gray-400 uppercase tracking-[0.2em] mt-2">
-                                          {state === 'setup' ? 'Set your focus duration' : 'Minutes Remaining'}
+                                  )}
+
+                                  {(state === 'running' || state === 'paused') && (
+                                      <div className="flex flex-wrap items-center justify-center gap-3">
+                                          <button 
+                                             onClick={() => {
+                                                 setState(state === 'running' ? 'paused' : 'running');
+                                                 triggerSound(state === 'running' ? 'disable' : 'enable');
+                                             }}
+                                             className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white border border-white/10 transition-all active:scale-95"
+                                          >
+                                              {state === 'running' ? (
+                                                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
+                                              ) : (
+                                                  <svg className="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                                              )}
+                                          </button>
+                                          
+                                          <button 
+                                              onClick={() => { setIsParkingLotOpen(true); triggerSound('enable'); }}
+                                              className="h-12 px-5 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center gap-2 text-xs font-bold transition-all active:scale-95"
+                                              title="Press 'D'"
+                                          >
+                                              <span>🧠</span> Capture Distraction
+                                          </button>
+
+                                          {state === 'paused' && (
+                                              <button 
+                                                 onClick={() => { setState('setup'); triggerSound('disable'); }}
+                                                 className="h-12 px-5 rounded-full bg-red-500/20 text-red-200 hover:bg-red-500/30 border border-red-500/30 text-xs font-bold transition-all active:scale-95"
+                                              >
+                                                  End
+                                              </button>
+                                          )}
                                       </div>
+                                  )}
+
+                                  <div className="flex flex-wrap items-center justify-center gap-2">
+                                      <button
+                                          onClick={() => {
+                                              const next = !isCalmMode;
+                                              setIsCalmMode(next);
+                                              triggerSound(next ? 'enable' : 'disable');
+                                          }}
+                                          className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-transform active:scale-95 ${isCalmMode ? 'bg-white/10 border-white/20 text-white' : 'border-gray-700 text-gray-400'}`}
+                                      >
+                                          Calm Mode
+                                      </button>
+                                      <button
+                                          onClick={() => {
+                                              const next = !isBreathingCueEnabled;
+                                              setIsBreathingCueEnabled(next);
+                                              triggerSound(next ? 'enable' : 'disable');
+                                          }}
+                                          className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-transform active:scale-95 ${isBreathingCueEnabled ? 'bg-white/10 border-white/20 text-white' : 'border-gray-700 text-gray-400'}`}
+                                      >
+                                          Breathing Cue
+                                      </button>
                                   </div>
 
-                                  <div className="mt-4 w-full">
-                                      {state === 'setup' ? (
-                                          <div>
-                                              <input
-                                                  type="range"
-                                                  min="60"
-                                                  max={maxTotalSeconds}
-                                                  step="60"
-                                                  value={setupTotalSeconds}
-                                                  onChange={(e) => {
-                                                      const snapped = snapToMinute(Number(e.target.value));
-                                                      setMinutes(snapped / 60);
-                                                      handleSliderTick();
-                                                  }}
-                                                  className={`w-full accent-falcon-gold ${isAIExpanded ? 'h-3 md:h-4' : 'h-6 md:h-7'}`}
-                                              />
-                                              <div className="mt-2 flex justify-between text-[10px] text-white/50 uppercase tracking-[0.2em]">
-                                                  <span>1:00</span>
-                                                  <span>59:59</span>
+                                  {isBreathingCueEnabled && state === 'running' && (
+                                      <div className="text-[11px] uppercase tracking-[0.3em] text-white/70 animate-breathe">
+                                          Breathe In · Breathe Out
+                                      </div>
+                                  )}
+                                  
+                                  {(state === 'setup' || state === 'running' || state === 'paused') && (
+                                      <div className={`w-full max-w-3xl mt-6 transform-gpu transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] origin-top ${isAIExpanded ? 'scale-[0.72] -translate-y-10 opacity-90' : 'scale-100 translate-y-0'}`}>
+                                          <div className="text-center">
+                                              <div className={`font-mono font-bold text-white tracking-tighter drop-shadow-md transition-all duration-300 ${
+                                                  isAIExpanded
+                                                      ? 'text-5xl md:text-6xl'
+                                                      : state === 'setup'
+                                                      ? 'text-8xl md:text-9xl'
+                                                      : 'text-7xl md:text-8xl'
+                                              }`}>
+                                                  {formatTime(state === 'setup' ? setupTotalSeconds : secondsRemaining)}
+                                              </div>
+                                              <div className="text-[10px] text-gray-400 uppercase tracking-[0.2em] mt-2">
+                                                  {state === 'setup' ? 'Set your focus duration' : 'Minutes Remaining'}
                                               </div>
                                           </div>
-                                      ) : (
-                                          <div className={`relative rounded-full bg-white/15 overflow-hidden ${isAIExpanded ? 'h-3 md:h-4' : 'h-8 md:h-10'}`}>
-                                              <div
-                                                  className="absolute inset-y-0 left-0 bg-emerald-400/90 transition-[width] duration-500 ease-out"
-                                                  style={{ width: `${Math.max(0, (1 - runningProgress)) * 100}%` }}
-                                              />
+
+                                          <div className="mt-4 w-full">
+                                              {state === 'setup' ? (
+                                                  <div>
+                                                      <input
+                                                          type="range"
+                                                          min="60"
+                                                          max={maxTotalSeconds}
+                                                          step="60"
+                                                          value={setupTotalSeconds}
+                                                          onChange={(e) => {
+                                                              const snapped = snapToMinute(Number(e.target.value));
+                                                              setMinutes(snapped / 60);
+                                                              handleSliderTick();
+                                                          }}
+                                                          className={`w-full accent-falcon-gold ${isAIExpanded ? 'h-3 md:h-4' : 'h-6 md:h-7'}`}
+                                                      />
+                                                      <div className="mt-2 flex justify-between text-[10px] text-white/50 uppercase tracking-[0.2em]">
+                                                          <span>1:00</span>
+                                                          <span>59:59</span>
+                                                      </div>
+                                                  </div>
+                                              ) : (
+                                                  <div className={`relative rounded-full bg-white/15 overflow-hidden ${isAIExpanded ? 'h-3 md:h-4' : 'h-8 md:h-10'}`}>
+                                                      <div
+                                                          className="absolute inset-y-0 left-0 bg-emerald-400/90 transition-[width] duration-500 ease-out"
+                                                          style={{ width: `${Math.max(0, (1 - runningProgress)) * 100}%` }}
+                                                      />
+                                                  </div>
+                                              )}
                                           </div>
-                                      )}
-                                  </div>
+                                      </div>
+                                  )}
                               </div>
-                          )}
                           </div>
                       </div>
 
@@ -697,7 +700,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                   </div>
 
                   <div className="w-full px-4 md:px-8 pointer-events-auto">
-                      <div className="mx-auto w-full max-w-2xl rounded-3xl border border-white/10 bg-white/5 backdrop-blur-lg px-4 py-3 shadow-[0_12px_40px_-24px_rgba(0,0,0,0.7)]">
+                      <div className="mx-auto w-full max-w-2xl">
                           <SpotifyPlayer className="w-full" onArtworkChange={handleSpotifyArtworkChange} />
                       </div>
                   </div>

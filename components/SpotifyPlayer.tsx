@@ -190,15 +190,6 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
         <div ref={containerRef} className={`relative w-full ${className || ''}`}>
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    {artworkUrl && (
-                        <div className="h-10 w-10 rounded-lg overflow-hidden border border-white/10 bg-white/5 shrink-0">
-                            <img
-                                src={artworkUrl}
-                                alt="Now playing cover"
-                                className="h-full w-full object-cover"
-                            />
-                        </div>
-                    )}
                     <button
                         onClick={() => setIsMenuOpen((prev) => !prev)}
                         className="px-3 py-1.5 rounded-full border border-white/15 text-[10px] uppercase tracking-[0.2em] text-white/70 hover:text-white hover:border-white/40 transition"
@@ -274,31 +265,44 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
 
             <div className={`transition-transform duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${isMenuOpen ? 'translate-y-3' : 'translate-y-0'} mt-4`}>
                 <div className="mx-auto w-full max-w-2xl">
-                    <SpotifyWebPlayback
-                        token={token}
-                        uris={activeUris}
-                        callback={handlePlayback}
-                        layout="compact"
-                        hideCoverArt={true}
-                        hideAttribution={true}
-                        inlineVolume={false}
-                        styles={{
-                            activeColor: '#EAB308',
-                            bgColor: 'transparent',
-                            color: '#FFFFFF',
-                            errorColor: '#F87171',
-                            loaderColor: '#EAB308',
-                            sliderColor: '#EAB308',
-                            sliderHandleColor: '#EAB308',
-                            sliderHandleBorderRadius: '999px',
-                            sliderTrackBorderRadius: '999px',
-                            sliderTrackColor: 'rgba(255,255,255,0.2)',
-                            trackArtistColor: '#D1D5DB',
-                            trackNameColor: '#FFFFFF',
-                            height: 72,
-                            sliderHeight: 4
-                        }}
-                    />
+                    <div className="flex items-center gap-4">
+                        {artworkUrl && (
+                            <div className="h-[72px] w-[72px] rounded-xl overflow-hidden border border-white/10 bg-white/5 shrink-0">
+                                <img
+                                    src={artworkUrl}
+                                    alt="Now playing cover"
+                                    className="h-full w-full object-cover"
+                                />
+                            </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                            <SpotifyWebPlayback
+                                token={token}
+                                uris={activeUris}
+                                callback={handlePlayback}
+                                layout="compact"
+                                hideCoverArt={true}
+                                hideAttribution={true}
+                                inlineVolume={false}
+                                styles={{
+                                    activeColor: '#EAB308',
+                                    bgColor: 'transparent',
+                                    color: '#FFFFFF',
+                                    errorColor: '#F87171',
+                                    loaderColor: '#EAB308',
+                                    sliderColor: '#EAB308',
+                                    sliderHandleColor: '#EAB308',
+                                    sliderHandleBorderRadius: '999px',
+                                    sliderTrackBorderRadius: '999px',
+                                    sliderTrackColor: 'rgba(255,255,255,0.2)',
+                                    trackArtistColor: '#D1D5DB',
+                                    trackNameColor: '#FFFFFF',
+                                    height: 72,
+                                    sliderHeight: 4
+                                }}
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
