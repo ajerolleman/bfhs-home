@@ -259,7 +259,7 @@ const App: React.FC = () => {
             <div className={`z-[40] flex justify-center transition-all duration-1000 ease-spring ${fullPageChatOpen ? 'opacity-0 pointer-events-none absolute' : 'opacity-100 relative py-12 md:py-16'}`}>
                 <div className="w-full flex flex-col items-center gap-6">
                     <AIQuickBar onSearch={handleSearch} onOpenChat={() => { if (!currentSession) setCurrentSession(createNewSession()); setFullPageChatOpen(true); }} />
-                    {spotifyToken && isSpotifyPlaying && (
+                    {spotifyToken && (
                         <div className="w-full max-w-3xl px-4">
                             <SpotifyPlayer className="w-full" />
                         </div>
