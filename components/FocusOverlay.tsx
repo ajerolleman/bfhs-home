@@ -451,11 +451,17 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
               backgroundImage: spotifyArtworkUrl ? `url(${spotifyArtworkUrl})` : 'none',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
-              opacity: spotifyArtworkUrl ? 0.4 : 0,
-              filter: 'blur(80px)',
-              transform: 'scale(1.18)'
+              opacity: spotifyArtworkUrl ? 0.98 : 0,
+              filter: 'blur(22px) brightness(1.05) saturate(1.3)',
+              transform: 'scale(1.12)'
           }}
       />
+      {spotifyArtworkUrl && (
+          <>
+              <div className="fixed inset-0 pointer-events-none bg-[linear-gradient(120deg,rgba(8,26,18,0.35),rgba(12,30,22,0.28),rgba(6,18,14,0.38))]" />
+              <div className="fixed inset-0 pointer-events-none bg-black/10" />
+          </>
+      )}
       <div className="fixed inset-0 bg-noise opacity-[0.05] pointer-events-none mix-blend-overlay"></div>
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),transparent_55%)] pointer-events-none"></div>
       <div className="fixed -top-32 -left-16 w-[520px] h-[520px] bg-falcon-green/20 rounded-full blur-[160px] animate-focus-orb-slow"></div>
@@ -475,13 +481,11 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                               backgroundImage: `url(${spotifyArtworkUrl})`,
                               backgroundSize: 'cover',
                               backgroundPosition: 'center',
-                              filter: 'blur(22px) brightness(1.05) saturate(1.3)',
-                              transform: 'scale(1.12)',
-                              opacity: 0.98
+                              filter: 'blur(80px)',
+                              transform: 'scale(1.18)',
+                              opacity: 0.4
                           }}
                       />
-                      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(120deg,rgba(8,26,18,0.35),rgba(12,30,22,0.28),rgba(6,18,14,0.38))]" />
-                      <div className="absolute inset-0 pointer-events-none bg-black/5" />
                   </>
               )}
               <div className="flex items-center gap-6">
