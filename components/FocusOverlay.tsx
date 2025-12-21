@@ -474,13 +474,13 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                               backgroundImage: `url(${spotifyArtworkUrl})`,
                               backgroundSize: 'cover',
                               backgroundPosition: 'center',
-                              filter: 'blur(36px) brightness(0.55) saturate(1.15)',
+                              filter: 'blur(36px) brightness(0.72) saturate(1.2)',
                               transform: 'scale(1.2)',
                               opacity: 0.85
                           }}
                       />
-                      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(120deg,rgba(4,14,10,0.96),rgba(8,22,16,0.92),rgba(3,10,8,0.98))]" />
-                      <div className="absolute inset-0 pointer-events-none bg-black/35" />
+                      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(120deg,rgba(8,26,18,0.88),rgba(12,30,22,0.82),rgba(6,18,14,0.9))]" />
+                      <div className="absolute inset-0 pointer-events-none bg-black/20" />
                   </>
               )}
               <div className="flex items-center gap-6">
@@ -532,10 +532,12 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                       key={mode}
                                       onClick={() => { setBackgroundMode(mode); triggerSound('enable'); }}
                                       className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-transform active:scale-95 ${
-                                          backgroundMode === mode
+                                          hasArtwork
+                                              ? backgroundMode === mode
+                                                  ? 'border-white text-white bg-white/20 shadow-[0_0_14px_rgba(255,255,255,0.7)]'
+                                                  : 'border-white text-white bg-white/12 shadow-[0_0_10px_rgba(255,255,255,0.45)]'
+                                              : backgroundMode === mode
                                               ? 'border-falcon-gold/40 text-falcon-gold bg-white/5'
-                                              : hasArtwork
-                                              ? 'border-white/70 text-white bg-white/10 shadow-[0_0_10px_rgba(255,255,255,0.35)]'
                                               : 'border-white/10 text-gray-400'
                                       }`}
                                   >
