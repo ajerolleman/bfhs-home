@@ -424,6 +424,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const isFocusMode = state === 'running' || state === 'paused';
   const showHeaderTimer = isAIExpanded && isFocusMode;
   const showCenteredTimer = isFocusMode && !isAIExpanded;
+  const hasArtwork = Boolean(spotifyArtworkUrl);
   const aiDockClearance = aiDockHeight ? aiDockHeight + 16 : 0;
   const snapToMinute = (rawSeconds: number) => {
       if (rawSeconds >= maxTotalSeconds - 59) return maxTotalSeconds;
@@ -473,12 +474,13 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                               backgroundImage: `url(${spotifyArtworkUrl})`,
                               backgroundSize: 'cover',
                               backgroundPosition: 'center',
-                              filter: 'blur(28px) brightness(1.25) saturate(1.25)',
+                              filter: 'blur(34px) brightness(0.7) saturate(1.2)',
                               transform: 'scale(1.2)',
-                              opacity: 0.8
+                              opacity: 0.85
                           }}
                       />
-                      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(120deg,rgba(14,35,26,0.75),rgba(18,46,36,0.55),rgba(8,22,16,0.8))]" />
+                      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(120deg,rgba(6,20,14,0.9),rgba(10,28,20,0.8),rgba(4,14,10,0.92))]" />
+                      <div className="absolute inset-0 pointer-events-none bg-black/20" />
                   </>
               )}
               <div className="flex items-center gap-6">
@@ -490,8 +492,8 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                       />
                   </div>
                   <div>
-                      <div className="text-[10px] uppercase font-bold tracking-widest text-falcon-gold">BFHS Internal</div>
-                      <div className="text-sm font-bold">Focus</div>
+                      <div className={`text-[10px] uppercase font-bold tracking-widest ${hasArtwork ? 'text-white' : 'text-falcon-gold'}`}>BFHS Internal</div>
+                      <div className={`text-sm font-bold ${hasArtwork ? 'text-white' : ''}`}>Focus</div>
                   </div>
                   <div className="hidden sm:block">
                       <DayTicker userProfile={userProfile} />
@@ -519,14 +521,18 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
 
               <div className="flex items-center gap-3">
                   <div className="hidden lg:flex items-center gap-2">
-                      <span className="text-[10px] uppercase font-bold tracking-widest text-white/50">Background</span>
+                      <span className={`text-[10px] uppercase font-bold tracking-widest ${hasArtwork ? 'text-white' : 'text-white/50'}`}>Background</span>
                       <div className="flex items-center gap-2">
                               {(['calm', 'forest', 'dusk'] as const).map((mode) => (
                                   <button
                                       key={mode}
                                       onClick={() => { setBackgroundMode(mode); triggerSound('enable'); }}
                                       className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-transform active:scale-95 ${
-                                          backgroundMode === mode ? 'border-falcon-gold/40 text-falcon-gold bg-white/5' : 'border-white/10 text-gray-400'
+                                          backgroundMode === mode
+                                              ? 'border-falcon-gold/40 text-falcon-gold bg-white/5'
+                                              : hasArtwork
+                                              ? 'border-white/40 text-white'
+                                              : 'border-white/10 text-gray-400'
                                       }`}
                                   >
                                   {mode}
@@ -536,7 +542,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                   </div>
                   <button 
                      onClick={onExit} 
-                     className="text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-colors"
+                     className={`text-xs font-bold uppercase tracking-wider transition-colors ${hasArtwork ? 'text-white hover:text-white' : 'text-gray-400 hover:text-white'}`}
                   >
                       Exit (ESC)
                   </button>
