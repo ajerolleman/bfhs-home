@@ -12,7 +12,6 @@ import ProfileModal from './components/ProfileModal';
 import ChatOverlay from './components/ChatOverlay';
 import ChatPanel from './components/ChatPanel';
 import FocusOverlay from './components/FocusOverlay';
-import Schedule from './components/Schedule';
 import { subscribeToAuth, getUserProfile, getRecentMemoryNotes } from './services/firebase';
 import { sendMessageToGemini } from './services/geminiService';
 import { createNewSession, saveSession } from './services/chatHistoryService';
@@ -115,13 +114,6 @@ const App: React.FC = () => {
       } finally { setIsSending(false); }
   };
 
-  const academicPulse = [
-    { label: 'PSAT Testing', date: 'Oct 8', status: 'Upcoming' },
-    { label: 'Fall Break', date: 'Oct 10-13', status: 'Holiday' },
-    { label: 'Alumni Weekend', date: 'Nov 7-9', status: 'Event' },
-    { label: 'Thanksgiving', date: 'Nov 24-28', status: 'Holiday' }
-  ];
-
   return (
     <div>
       <CustomCursor />
@@ -158,43 +150,9 @@ const App: React.FC = () => {
             
             <main className={`container mx-auto px-4 py-4 max-w-[1200px] space-y-16 relative z-10 transition-all duration-700 ease-spring ${fullPageChatOpen ? 'opacity-0 pointer-events-none scale-95 blur-sm' : 'opacity-100 scale-100 blur-0'}`}>
                   
-                  {/* Dashboard Grid */}
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                      {/* Left/Middle: Schedule & Slides */}
-                      <div className="lg:col-span-2 space-y-12">
-                          <Schedule userProfile={userProfile} />
-                          <Slides />
-                      </div>
-
-                      {/* Right: Academic Pulse & Quick Stats */}
-                      <div className="space-y-8">
-                          <div className="oled-card rounded-2xl p-6 bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-white/5 shadow-sm">
-                              <h3 className="text-lg font-bold text-falcon-green dark:text-falcon-gold mb-4 uppercase tracking-widest flex items-center gap-2">
-                                  <span className="text-xl">📊</span> Academic Pulse
-                              </h3>
-                              <div className="space-y-4">
-                                  {academicPulse.map((item, idx) => (
-                                      <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-white/5 hover:bg-white transition-colors group">
-                                          <div>
-                                              <div className="text-sm font-bold text-gray-800 dark:text-gray-200">{item.label}</div>
-                                              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{item.date}</div>
-                                          </div>
-                                          <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter ${
-                                              item.status === 'Holiday' ? 'bg-orange-100 text-orange-600' : 
-                                              item.status === 'Event' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'
-                                          }`}>
-                                              {item.status}
-                                          </span>
-                                      </div>
-                                  ))}
-                              </div>
-                              <button onClick={() => window.location.href = '/?page=calendar'} className="w-full mt-6 py-2 text-xs font-bold text-falcon-green hover:text-falcon-dark dark:text-falcon-gold transition-colors uppercase tracking-widest border-t border-gray-100 dark:border-white/5 pt-4">
-                                  Full Calendar ↗
-                              </button>
-                          </div>
-
-                          <News />
-                      </div>
+                  <div className="space-y-12">
+                      <Slides />
+                      <News />
                   </div>
 
                   <footer className="text-center text-xs text-gray-400 font-mono mt-20 mb-4 border-t border-gray-200 dark:border-white/5 pt-8">
