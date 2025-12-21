@@ -63,6 +63,14 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
         onArtworkChange?.(null);
     }, [token, onArtworkChange]);
 
+    const updateArtwork = useCallback((url: string | null) => {
+        if (url !== artworkRef.current) {
+            artworkRef.current = url;
+            setArtworkUrl(url);
+            onArtworkChange?.(url);
+        }
+    }, [onArtworkChange]);
+
     const handlePlayback = useCallback((state: any) => {
         const images = state?.track?.album?.images;
         const nextUrl =
@@ -70,12 +78,38 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
             images?.[1]?.url ||
             images?.[2]?.url ||
             null;
-        if (nextUrl !== artworkRef.current) {
-            artworkRef.current = nextUrl;
-            setArtworkUrl(nextUrl);
-            onArtworkChange?.(nextUrl);
-        }
-    }, [onArtworkChange]);
+        updateArtwork(nextUrl);
+    }, [updateArtwork]);
+
+    useEffect(() => {
+        if (!token) return;
+        let isMounted = true;
+        const fetchNowPlaying = () => {
+            fetch('https://api.spotify.com/v1/me/player', {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+                .then((res) => (res.status === 204 ? null : res.json()))
+                .then((data) => {
+                    if (!isMounted) return;
+                    const images = data?.item?.album?.images;
+                    const nextUrl =
+                        images?.[0]?.url ||
+                        images?.[1]?.url ||
+                        images?.[2]?.url ||
+                        null;
+                    updateArtwork(nextUrl);
+                })
+                .catch(() => {
+                    if (isMounted) updateArtwork(null);
+                });
+        };
+        fetchNowPlaying();
+        const interval = window.setInterval(fetchNowPlaying, 15000);
+        return () => {
+            isMounted = false;
+            window.clearInterval(interval);
+        };
+    }, [token, updateArtwork]);
 
     useEffect(() => {
         if (!token) return;

@@ -471,7 +471,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
           </div>
 
           {/* Scrollable Body */}
-          <div className={`flex-1 min-h-0 overflow-y-auto scroll-smooth flex flex-col transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${isAIExpanded ? 'pb-[45vh]' : 'pb-[26rem]'}`}>
+          <div className={`flex-1 min-h-0 overflow-hidden flex flex-col transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${isAIExpanded ? 'pb-[45vh]' : 'pb-[26rem]'}`}>
               <div ref={topRef} className="h-0 w-full" />
               {/* Main Content */}
               <div className={`w-full flex flex-col items-center px-4 md:px-8 pb-10 min-h-[calc(100vh-220px)] transform-gpu transition-transform duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${state === 'setup' ? 'justify-center pt-6' : 'justify-start pt-8 md:pt-10'} ${isAIExpanded ? 'scale-[0.97] -translate-y-4' : 'scale-100 translate-y-0'}`}>
