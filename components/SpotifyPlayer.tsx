@@ -201,142 +201,146 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
 
     return (
         <div ref={containerRef} className={`relative w-full ${className || ''}`}>
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => setIsMenuOpen((prev) => !prev)}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/20 text-[10px] uppercase tracking-[0.2em] text-white/80 hover:text-white hover:border-white/60 transition"
-                        aria-expanded={isMenuOpen}
-                    >
-                        <span className="text-xs font-bold">{'<'}</span>
-                        <span>{isMenuOpen ? 'Hide Mixes' : 'Pull Left Mixes'}</span>
-                    </button>
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-white/50">{selectedLabel}</span>
-                </div>
-                <button
-                    onClick={() => {
-                        clearSpotifyAuth();
-                        setToken(null);
-                        setArtworkUrl(null);
-                        artworkRef.current = null;
-                        onArtworkChange?.(null);
-                        try {
-                            localStorage.removeItem('spotify_last_artwork_url');
-                        } catch (e) {
-                            // Ignore storage failures.
-                        }
-                    }}
-                    className="text-[10px] uppercase tracking-[0.2em] font-bold text-white/50 hover:text-white transition"
-                >
-                    Log out
-                </button>
-            </div>
+            <div className="w-full flex justify-center">
+                <div className="relative w-full max-w-3xl">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setIsMenuOpen((prev) => !prev)}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/20 text-[10px] uppercase tracking-[0.2em] text-white/80 hover:text-white hover:border-white/60 transition"
+                                aria-expanded={isMenuOpen}
+                            >
+                                <span className="text-xs font-bold">{'<'}</span>
+                                <span>Playlists</span>
+                            </button>
+                            <span className="text-[10px] uppercase tracking-[0.2em] text-white/50">{selectedLabel}</span>
+                        </div>
+                        <button
+                            onClick={() => {
+                                clearSpotifyAuth();
+                                setToken(null);
+                                setArtworkUrl(null);
+                                artworkRef.current = null;
+                                onArtworkChange?.(null);
+                                try {
+                                    localStorage.removeItem('spotify_last_artwork_url');
+                                } catch (e) {
+                                    // Ignore storage failures.
+                                }
+                            }}
+                            className="text-[10px] uppercase tracking-[0.2em] font-bold text-white/50 hover:text-white transition"
+                        >
+                            Log out
+                        </button>
+                    </div>
 
-            <div
-                className={`absolute right-full top-1/2 -translate-y-1/2 mr-4 w-[260px] max-w-[70vw] rounded-2xl border border-white/15 bg-white/10 backdrop-blur-2xl shadow-[0_24px_60px_-30px_rgba(0,0,0,0.75)] transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${
-                    isMenuOpen ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 translate-x-4 pointer-events-none'
-                }`}
-            >
-                <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
-                    <div className="text-[10px] uppercase tracking-[0.3em] text-white/80 font-bold">Mixes</div>
-                    <button
-                        onClick={() => setIsMenuOpen(false)}
-                        className="text-[10px] uppercase tracking-[0.3em] text-white/60 hover:text-white transition"
-                    >
-                        Close
-                    </button>
-                </div>
-                <div className="p-3 max-h-[260px] overflow-y-auto space-y-2">
-                    <button
-                        onClick={() => handleMixSelect(null, 'Continue Listening')}
-                        className={`w-full text-left px-3 py-2 rounded-xl text-[10px] uppercase tracking-[0.2em] transition ${
-                            selectedPlaylistId === null
-                                ? 'bg-white/20 text-white border border-white/40 shadow-[0_0_12px_rgba(255,255,255,0.25)]'
-                                : 'bg-white/5 text-white/70 border border-white/10 hover:text-white hover:border-white/30'
+                    <div
+                        className={`absolute right-full top-1/2 -translate-y-1/2 mr-6 w-[260px] max-w-[70vw] rounded-2xl border border-white/15 bg-white/10 backdrop-blur-2xl shadow-[0_24px_60px_-30px_rgba(0,0,0,0.75)] transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${
+                            isMenuOpen ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 translate-x-4 pointer-events-none'
                         }`}
                     >
-                        Continue Listening
-                    </button>
-                    <div className="text-[9px] uppercase tracking-[0.3em] text-white/50 pt-2">Featured</div>
-                    {PLAYLISTS.map((playlist) => (
-                        <button
-                            key={playlist.id}
-                            onClick={() => handleMixSelect(playlist.id, playlist.label, playlist.uris)}
-                            className={`w-full text-left px-3 py-2 rounded-xl text-[10px] uppercase tracking-[0.2em] transition ${
-                                selectedPlaylistId === playlist.id
-                                    ? 'bg-white/20 text-white border border-white/40 shadow-[0_0_12px_rgba(255,255,255,0.25)]'
-                                    : 'bg-white/5 text-white/70 border border-white/10 hover:text-white hover:border-white/30'
-                            }`}
-                        >
-                            {playlist.label}
-                        </button>
-                    ))}
-                    <div className="text-[9px] uppercase tracking-[0.3em] text-white/50 pt-2">Your Playlists</div>
-                    {userPlaylists.map((playlist) => (
-                        <button
-                            key={playlist.id}
-                            onClick={() => handleMixSelect(`user:${playlist.id}`, playlist.name, [playlist.uri])}
-                            className={`w-full text-left px-3 py-2 rounded-xl text-[10px] uppercase tracking-[0.2em] transition ${
-                                selectedPlaylistId === `user:${playlist.id}`
-                                    ? 'bg-white/20 text-white border border-white/40 shadow-[0_0_12px_rgba(255,255,255,0.25)]'
-                                    : 'bg-white/5 text-white/70 border border-white/10 hover:text-white hover:border-white/30'
-                            }`}
-                        >
-                            {playlist.name}
-                        </button>
-                    ))}
-                    <button
-                        onClick={() => window.open('https://open.spotify.com/dj', '_blank', 'noopener,noreferrer')}
-                        className="w-full text-left px-3 py-2 rounded-xl text-[10px] uppercase tracking-[0.2em] bg-white/5 text-white/70 border border-white/10 hover:text-white hover:border-white/30 transition"
-                    >
-                        DJ Mode
-                    </button>
-                </div>
-                <div className="px-4 pb-3 text-[9px] uppercase tracking-[0.3em] text-white/40">
-                    {isLoadingPlaylists && 'Loading your playlists...'}
-                    {!isLoadingPlaylists && playlistError && playlistError}
-                    {!isLoadingPlaylists && !playlistError && userPlaylists.length === 0 && 'No playlists found.'}
-                </div>
-            </div>
+                        <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+                            <div className="text-[10px] uppercase tracking-[0.3em] text-white/80 font-bold">Mixes</div>
+                            <button
+                                onClick={() => setIsMenuOpen(false)}
+                                className="text-[10px] uppercase tracking-[0.3em] text-white/60 hover:text-white transition"
+                            >
+                                Close
+                            </button>
+                        </div>
+                        <div className="p-3 max-h-[260px] overflow-y-auto space-y-2">
+                            <button
+                                onClick={() => handleMixSelect(null, 'Continue Listening')}
+                                className={`w-full text-left px-3 py-2 rounded-xl text-[10px] uppercase tracking-[0.2em] transition ${
+                                    selectedPlaylistId === null
+                                        ? 'bg-white/20 text-white border border-white/40 shadow-[0_0_12px_rgba(255,255,255,0.25)]'
+                                        : 'bg-white/5 text-white/70 border border-white/10 hover:text-white hover:border-white/30'
+                                }`}
+                            >
+                                Continue Listening
+                            </button>
+                            <div className="text-[9px] uppercase tracking-[0.3em] text-white/50 pt-2">Featured</div>
+                            {PLAYLISTS.map((playlist) => (
+                                <button
+                                    key={playlist.id}
+                                    onClick={() => handleMixSelect(playlist.id, playlist.label, playlist.uris)}
+                                    className={`w-full text-left px-3 py-2 rounded-xl text-[10px] uppercase tracking-[0.2em] transition ${
+                                        selectedPlaylistId === playlist.id
+                                            ? 'bg-white/20 text-white border border-white/40 shadow-[0_0_12px_rgba(255,255,255,0.25)]'
+                                            : 'bg-white/5 text-white/70 border border-white/10 hover:text-white hover:border-white/30'
+                                    }`}
+                                >
+                                    {playlist.label}
+                                </button>
+                            ))}
+                            <div className="text-[9px] uppercase tracking-[0.3em] text-white/50 pt-2">Your Playlists</div>
+                            {userPlaylists.map((playlist) => (
+                                <button
+                                    key={playlist.id}
+                                    onClick={() => handleMixSelect(`user:${playlist.id}`, playlist.name, [playlist.uri])}
+                                    className={`w-full text-left px-3 py-2 rounded-xl text-[10px] uppercase tracking-[0.2em] transition ${
+                                        selectedPlaylistId === `user:${playlist.id}`
+                                            ? 'bg-white/20 text-white border border-white/40 shadow-[0_0_12px_rgba(255,255,255,0.25)]'
+                                            : 'bg-white/5 text-white/70 border border-white/10 hover:text-white hover:border-white/30'
+                                    }`}
+                                >
+                                    {playlist.name}
+                                </button>
+                            ))}
+                            <button
+                                onClick={() => window.open('https://open.spotify.com/dj', '_blank', 'noopener,noreferrer')}
+                                className="w-full text-left px-3 py-2 rounded-xl text-[10px] uppercase tracking-[0.2em] bg-white/5 text-white/70 border border-white/10 hover:text-white hover:border-white/30 transition"
+                            >
+                                DJ Mode
+                            </button>
+                        </div>
+                        <div className="px-4 pb-3 text-[9px] uppercase tracking-[0.3em] text-white/40">
+                            {isLoadingPlaylists && 'Loading your playlists...'}
+                            {!isLoadingPlaylists && playlistError && playlistError}
+                            {!isLoadingPlaylists && !playlistError && userPlaylists.length === 0 && 'No playlists found.'}
+                        </div>
+                    </div>
 
-            <div className={`transition-transform duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${isMenuOpen ? 'translate-y-3' : 'translate-y-0'} mt-4`}>
-                <div className="mx-auto w-full max-w-2xl">
-                    <div className="flex items-center gap-4">
-                        {artworkUrl && (
-                            <div className="h-[72px] w-[72px] rounded-xl overflow-hidden border border-white/10 bg-white/5 shrink-0">
-                                <img
-                                    src={artworkUrl}
-                                    alt="Now playing cover"
-                                    className="h-full w-full object-cover"
-                                />
+                    <div className={`transition-transform duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${isMenuOpen ? 'translate-y-3' : 'translate-y-0'} mt-4`}>
+                        <div className="w-full">
+                            <div className="flex items-center gap-4">
+                                {artworkUrl && (
+                                    <div className="h-[72px] w-[72px] rounded-xl overflow-hidden border border-white/10 bg-white/5 shrink-0">
+                                        <img
+                                            src={artworkUrl}
+                                            alt="Now playing cover"
+                                            className="h-full w-full object-cover"
+                                        />
+                                    </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                    <SpotifyWebPlayback
+                                        token={token}
+                                        uris={activeUris}
+                                        callback={handlePlayback}
+                                        layout="compact"
+                                        hideCoverArt={true}
+                                        hideAttribution={true}
+                                        inlineVolume={false}
+                                        styles={{
+                                            activeColor: '#EAB308',
+                                            bgColor: 'transparent',
+                                            color: '#FFFFFF',
+                                            errorColor: '#F87171',
+                                            loaderColor: '#EAB308',
+                                            sliderColor: '#EAB308',
+                                            sliderHandleColor: '#EAB308',
+                                            sliderHandleBorderRadius: '999px',
+                                            sliderTrackBorderRadius: '999px',
+                                            sliderTrackColor: 'rgba(255,255,255,0.2)',
+                                            trackArtistColor: '#D1D5DB',
+                                            trackNameColor: '#FFFFFF',
+                                            height: 72,
+                                            sliderHeight: 4
+                                        }}
+                                    />
+                                </div>
                             </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                            <SpotifyWebPlayback
-                                token={token}
-                                uris={activeUris}
-                                callback={handlePlayback}
-                                layout="compact"
-                                hideCoverArt={true}
-                                hideAttribution={true}
-                                inlineVolume={false}
-                                styles={{
-                                    activeColor: '#EAB308',
-                                    bgColor: 'transparent',
-                                    color: '#FFFFFF',
-                                    errorColor: '#F87171',
-                                    loaderColor: '#EAB308',
-                                    sliderColor: '#EAB308',
-                                    sliderHandleColor: '#EAB308',
-                                    sliderHandleBorderRadius: '999px',
-                                    sliderTrackBorderRadius: '999px',
-                                    sliderTrackColor: 'rgba(255,255,255,0.2)',
-                                    trackArtistColor: '#D1D5DB',
-                                    trackNameColor: '#FFFFFF',
-                                    height: 72,
-                                    sliderHeight: 4
-                                }}
-                            />
                         </div>
                     </div>
                 </div>

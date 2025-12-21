@@ -5,6 +5,7 @@ import QuickLinks from './components/QuickLinks';
 import News from './components/News';
 import Slides from './components/Slides';
 import AIQuickBar from './components/AIQuickBar';
+import SpotifyPlayer from './components/SpotifyPlayer';
 import TechResources from './components/TechResources';
 import CustomCursor from './components/CustomCursor';
 import Spotlight from './components/Spotlight';
@@ -15,7 +16,7 @@ import FocusOverlay from './components/FocusOverlay';
 import { subscribeToAuth, getUserProfile, getRecentMemoryNotes, logout } from './services/firebase';
 import { sendMessageToGemini } from './services/geminiService';
 import { createNewSession, saveSession } from './services/chatHistoryService';
-import { initSpotifyAuth, exchangeSpotifyCodeForToken } from './services/authService';
+import { initSpotifyAuth, exchangeSpotifyCodeForToken, getStoredSpotifyToken } from './services/authService';
 import { UserProfile, ChatMessage, MemoryNote, ChatSession } from './types';
 
 const App: React.FC = () => {
@@ -33,13 +34,19 @@ const App: React.FC = () => {
         if (code) {
           const token = await exchangeSpotifyCodeForToken(code);
           window.history.replaceState({}, document.title, '/');
-          if (token) console.log('Spotify connected');
+          if (token) {
+            setSpotifyToken(token);
+            console.log('Spotify connected');
+          }
           return;
         }
       }
 
       const token = initSpotifyAuth();
-      if (token) console.log('Spotify connected');
+      if (token) {
+        setSpotifyToken(token);
+        console.log('Spotify connected');
+      }
     };
 
     handleSpotify();
@@ -55,8 +62,45 @@ const App: React.FC = () => {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
+  const [isSpotifyPlaying, setIsSpotifyPlaying] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
+
+  useEffect(() => {
+    if (!spotifyToken) {
+      setIsSpotifyPlaying(false);
+      return;
+    }
+    let isMounted = true;
+    const checkPlayback = () => {
+      const storedToken = getStoredSpotifyToken();
+      if (!storedToken) {
+        if (isMounted) {
+          setSpotifyToken(null);
+          setIsSpotifyPlaying(false);
+        }
+        return;
+      }
+      fetch('https://api.spotify.com/v1/me/player', {
+        headers: { Authorization: `Bearer ${storedToken}` }
+      })
+        .then((res) => (res.status === 204 ? null : res.json()))
+        .then((data) => {
+          if (!isMounted) return;
+          setIsSpotifyPlaying(Boolean(data?.is_playing && data?.item));
+        })
+        .catch(() => {
+          if (isMounted) setIsSpotifyPlaying(false);
+        });
+    };
+    checkPlayback();
+    const interval = window.setInterval(checkPlayback, 15000);
+    return () => {
+      isMounted = false;
+      window.clearInterval(interval);
+    };
+  }, [spotifyToken]);
 
   useEffect(() => {
     if (fullPageChatOpen || isFocusMode) {
@@ -213,7 +257,14 @@ const App: React.FC = () => {
             {fullPageChatOpen && <div style={{ height: headerHeight }} />}
 
             <div className={`z-[40] flex justify-center transition-all duration-1000 ease-spring ${fullPageChatOpen ? 'opacity-0 pointer-events-none absolute' : 'opacity-100 relative py-12 md:py-16'}`}>
-                <AIQuickBar onSearch={handleSearch} onOpenChat={() => { if (!currentSession) setCurrentSession(createNewSession()); setFullPageChatOpen(true); }} />
+                <div className="w-full flex flex-col items-center gap-6">
+                    <AIQuickBar onSearch={handleSearch} onOpenChat={() => { if (!currentSession) setCurrentSession(createNewSession()); setFullPageChatOpen(true); }} />
+                    {spotifyToken && isSpotifyPlaying && (
+                        <div className="w-full max-w-3xl px-4">
+                            <SpotifyPlayer className="w-full" />
+                        </div>
+                    )}
+                </div>
             </div>
             
             <main className={`container mx-auto px-4 py-4 max-w-[1200px] space-y-16 relative z-10 transition-all duration-700 ease-spring ${fullPageChatOpen ? 'opacity-0 pointer-events-none scale-95 blur-sm' : 'opacity-100 scale-100 blur-0'}`}>
