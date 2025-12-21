@@ -261,7 +261,7 @@ const App: React.FC = () => {
                     <AIQuickBar onSearch={handleSearch} onOpenChat={() => { if (!currentSession) setCurrentSession(createNewSession()); setFullPageChatOpen(true); }} />
                     {spotifyToken && (
                         <div className="w-full max-w-3xl px-4">
-                            <SpotifyPlayer className="w-full" />
+                            <SpotifyPlayer className="w-full" tone="light" />
                         </div>
                     )}
                 </div>
