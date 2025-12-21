@@ -110,7 +110,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const [isAIExpanded, setIsAIExpanded] = useState(false);
   const [isMixesOpen, setIsMixesOpen] = useState(false);
   const [spotifyArtworkUrl, setSpotifyArtworkUrl] = useState<string | null>(null);
-  const [aiDockHeight, setAiDockHeight] = useState(180);
+  const [aiDockHeight, setAiDockHeight] = useState(240);
   const hasConversation = (currentSession?.messages?.length ?? 0) > 0;
   
   // Refs
@@ -210,9 +210,26 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       if (!isActive) setIsAIExpanded(false);
   }, [isActive]);
 
+  useEffect(() => {
+      if (!isActive) return;
+      const originalBodyOverflow = document.body.style.overflow;
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+      const originalBodyHeight = document.body.style.height;
+      const originalHtmlHeight = document.documentElement.style.height;
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.height = '100%';
+      document.documentElement.style.height = '100%';
+      return () => {
+          document.body.style.overflow = originalBodyOverflow;
+          document.documentElement.style.overflow = originalHtmlOverflow;
+          document.body.style.height = originalBodyHeight;
+          document.documentElement.style.height = originalHtmlHeight;
+      };
+  }, [isActive]);
+
   const handleCollapseAI = () => {
       setIsAIExpanded(false);
-      topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   useEffect(() => {
@@ -402,6 +419,10 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const runningProgress = sessionTotalSeconds
       ? Math.max(0, Math.min(1, 1 - secondsRemaining / sessionTotalSeconds))
       : 0;
+  const isFocusMode = state === 'running' || state === 'paused';
+  const showHeaderTimer = isAIExpanded && isFocusMode;
+  const showCenteredTimer = isFocusMode && !isAIExpanded;
+  const aiDockClearance = aiDockHeight ? aiDockHeight + 16 : 0;
   const snapToMinute = (rawSeconds: number) => {
       if (rawSeconds >= maxTotalSeconds - 59) return maxTotalSeconds;
       const snapped = Math.round(rawSeconds / 60) * 60;
@@ -411,9 +432,9 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   if (!isActive) return null;
 
   return (
-    <div className={`fixed inset-0 z-[150] text-white overflow-hidden select-none font-sans ${backgroundMode === 'dusk' ? 'bg-[#0C101B]' : 'bg-[#0B1310]'}`}>
+    <div className={`fixed inset-0 z-[150] text-white overflow-hidden overscroll-none select-none font-sans ${backgroundMode === 'dusk' ? 'bg-[#0C101B]' : 'bg-[#0B1310]'}`}>
       {/* Background */}
-      <div className={`absolute inset-0 ${
+      <div className={`fixed inset-0 ${
           backgroundMode === 'forest'
               ? 'bg-gradient-to-br from-[#07140F] via-[#0E231A] to-[#091611]'
               : backgroundMode === 'dusk'
@@ -421,7 +442,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
               : 'bg-gradient-to-br from-[#0B1310] via-[#0F1C18] to-[#0B1310]'
       }`} />
       <div
-          className="absolute inset-0 pointer-events-none transition-opacity duration-700"
+          className="fixed inset-0 pointer-events-none transition-opacity duration-700"
           style={{
               backgroundImage: spotifyArtworkUrl ? `url(${spotifyArtworkUrl})` : 'none',
               backgroundSize: 'cover',
@@ -431,15 +452,17 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
               transform: 'scale(1.18)'
           }}
       />
-      <div className="absolute inset-0 bg-noise opacity-[0.05] pointer-events-none mix-blend-overlay"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),transparent_55%)] pointer-events-none"></div>
-      <div className="absolute -top-32 -left-16 w-[520px] h-[520px] bg-falcon-green/20 rounded-full blur-[160px] animate-focus-orb-slow"></div>
-      <div className="absolute bottom-[-25%] right-[-10%] w-[620px] h-[620px] bg-falcon-gold/10 rounded-full blur-[180px] animate-focus-orb"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.45)_100%)] pointer-events-none"></div>
+      <div className="fixed inset-0 bg-noise opacity-[0.05] pointer-events-none mix-blend-overlay"></div>
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),transparent_55%)] pointer-events-none"></div>
+      <div className="fixed -top-32 -left-16 w-[520px] h-[520px] bg-falcon-green/20 rounded-full blur-[160px] animate-focus-orb-slow"></div>
+      <div className="fixed bottom-[-25%] right-[-10%] w-[620px] h-[620px] bg-falcon-gold/10 rounded-full blur-[180px] animate-focus-orb"></div>
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.45)_100%)] pointer-events-none"></div>
 
       <div className="relative z-10 flex flex-col h-full animate-fade-in">
           {/* Focus Header */}
-          <div className="w-full px-6 py-4 flex items-center justify-between bg-[linear-gradient(135deg,#12261E,#0F2019)] border-b border-white/10 relative">
+          <div className={`fixed left-0 right-0 px-6 flex items-center justify-between bg-[linear-gradient(135deg,#12261E,#0F2019)] border-b border-white/10 z-[130] ${
+              showHeaderTimer ? 'top-6 md:top-8 py-5 md:py-6' : 'top-0 py-4'
+          }`}>
               <div className="flex items-center gap-6">
                   <div className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center">
                       <img 
@@ -460,9 +483,19 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                   </div>
               </div>
 
-              {state === 'setup' && (
-                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-                      <div className="text-xs font-bold uppercase tracking-[0.35em] text-white/80">Focus Session</div>
+              {showHeaderTimer && (
+                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+                      <div className="font-mono font-bold text-white tracking-tight text-2xl md:text-3xl">
+                          {formatTime(secondsRemaining)}
+                      </div>
+                      <div className="mt-2 w-[200px] md:w-[260px] mx-auto">
+                          <div className="relative rounded-full bg-white/15 overflow-hidden h-2.5">
+                              <div
+                                  className="absolute inset-y-0 left-0 bg-emerald-400/90 transition-[width] duration-500 ease-out"
+                                  style={{ width: `${Math.max(0, (1 - runningProgress)) * 100}%` }}
+                              />
+                          </div>
+                      </div>
                   </div>
               )}
 
@@ -493,15 +526,46 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
           </div>
 
           {/* Scrollable Body */}
-          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+          <div className={`flex-1 min-h-0 overflow-hidden flex flex-col ${
+              showHeaderTimer
+                  ? 'pt-[104px] md:pt-[120px]'
+                  : isAIExpanded
+                  ? 'pt-[72px] md:pt-[80px]'
+                  : 'pt-16 md:pt-[72px]'
+          }`}>
               <div ref={topRef} className="h-0 w-full" />
               {/* Main Content */}
               <div
-                  className={`w-full flex flex-col items-center px-4 md:px-8 flex-1 min-h-0 transform-gpu transition-[padding-bottom,transform] duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] justify-start pt-4 md:pt-6 ${
+                  className={`relative w-full flex flex-col items-center px-4 md:px-8 flex-1 min-h-0 transform-gpu transition-[padding-bottom,transform] duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] justify-start ${
+                      isFocusMode ? 'pt-2 md:pt-3' : 'pt-4 md:pt-6'
+                  } ${
                       isAIExpanded ? 'scale-[0.985]' : 'scale-100'
                   }`}
-                  style={{ paddingBottom: aiDockHeight ? aiDockHeight + 16 : undefined }}
+                  style={{ paddingBottom: aiDockClearance ? aiDockClearance : undefined }}
               >
+                  {showCenteredTimer && (
+                      <div
+                          className="absolute inset-0 z-[110] pointer-events-none transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] flex items-center justify-center"
+                      >
+                          <div className="text-center">
+                              <div className={`font-mono font-bold text-white tracking-tight ${
+                                  'text-7xl sm:text-8xl md:text-9xl lg:text-[10rem]'
+                              }`}>
+                                  {formatTime(secondsRemaining)}
+                              </div>
+                              <div className={`mt-4 ${
+                                  'w-[280px] md:w-[420px]'
+                              } mx-auto`}>
+                                  <div className="relative rounded-full bg-white/15 overflow-hidden h-4 md:h-5">
+                                      <div
+                                          className="absolute inset-y-0 left-0 bg-emerald-400/90 transition-[width] duration-500 ease-out"
+                                          style={{ width: `${Math.max(0, (1 - runningProgress)) * 100}%` }}
+                                      />
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  )}
                   <div className="w-full max-w-6xl flex flex-col flex-1">
                       {state === 'setup' && (
                           <div className="w-full">
@@ -528,13 +592,15 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                           </div>
                       )}
 
-                      <div className={`flex-1 flex ${isAIExpanded ? 'items-end' : 'items-center'} justify-center transform-gpu transition-transform duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)]`}>
-                          <div className="w-full max-w-3xl mx-auto">
+                      <div className={`flex-1 flex ${isFocusMode ? 'items-start' : 'items-center'} justify-center transform-gpu transition-transform duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)]`}>
+                          <div className={`w-full max-w-3xl mx-auto ${isFocusMode ? 'pt-2' : ''}`}>
                               <div className={`flex flex-col items-center text-center ${isAIExpanded ? 'gap-3' : 'gap-4'}`}>
                                   {state !== 'setup' && (
                                       <div className={`font-extrabold text-white tracking-tight leading-none ${
                                           isAIExpanded
                                               ? 'text-4xl md:text-5xl lg:text-6xl'
+                                              : isFocusMode
+                                              ? 'text-6xl md:text-7xl lg:text-8xl'
                                               : 'text-5xl md:text-6xl lg:text-7xl'
                                       }`}>
                                           {taskName || 'Focus Session'}
@@ -548,18 +614,18 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                                  setState(state === 'running' ? 'paused' : 'running');
                                                  triggerSound(state === 'running' ? 'disable' : 'enable');
                                              }}
-                                             className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white border border-white/10 transition-all active:scale-95"
+                                             className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white border border-white/10 transition-all active:scale-95"
                                           >
                                               {state === 'running' ? (
-                                                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
+                                                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
                                               ) : (
-                                                  <svg className="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                                                  <svg className="w-6 h-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                                               )}
                                           </button>
                                           
                                           <button 
                                               onClick={() => { setIsParkingLotOpen(true); triggerSound('enable'); }}
-                                              className="h-12 px-5 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center gap-2 text-xs font-bold transition-all active:scale-95"
+                                              className="h-14 px-6 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center gap-2 text-sm font-bold transition-all active:scale-95"
                                               title="Press 'D'"
                                           >
                                               <span>🧠</span> Capture Distraction
@@ -690,63 +756,6 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                               </div>
                                           )}
                                           
-                                          {(state === 'setup' || state === 'running' || state === 'paused') && (
-                                              <div className={`w-full max-w-3xl transform-gpu transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] origin-top ${
-                                                  isAIExpanded
-                                                      ? 'mt-1 scale-[0.78] translate-y-0 opacity-95'
-                                                      : state === 'setup'
-                                                      ? 'mt-4 scale-100 translate-y-0'
-                                                      : 'mt-6 scale-100 translate-y-0'
-                                              }`}>
-                                                  <div className="text-center">
-                                                      <div className={`font-mono font-bold text-white tracking-tighter drop-shadow-md transition-all duration-300 ${
-                                                          isAIExpanded
-                                                              ? 'text-5xl md:text-6xl'
-                                                              : state === 'setup'
-                                                              ? 'text-8xl md:text-9xl'
-                                                              : 'text-7xl md:text-8xl'
-                                                      }`}>
-                                                          {formatTime(state === 'setup' ? setupTotalSeconds : secondsRemaining)}
-                                                      </div>
-                                                      {state === 'setup' && (
-                                                          <div className="text-[10px] text-gray-400 uppercase tracking-[0.2em] mt-2">
-                                                              Set your focus duration
-                                                          </div>
-                                                      )}
-                                                  </div>
-
-                                                  <div className={`w-full ${isAIExpanded ? 'mt-3' : 'mt-4'}`}>
-                                                      {state === 'setup' ? (
-                                                          <div>
-                                                              <input
-                                                                  type="range"
-                                                                  min="60"
-                                                                  max={maxTotalSeconds}
-                                                                  step="60"
-                                                                  value={setupTotalSeconds}
-                                                                  onChange={(e) => {
-                                                                      const snapped = snapToMinute(Number(e.target.value));
-                                                                      setMinutes(snapped / 60);
-                                                                      handleSliderTick();
-                                                                  }}
-                                                                  className={`w-full accent-falcon-gold ${isAIExpanded ? 'h-3 md:h-4' : 'h-6 md:h-7'}`}
-                                                              />
-                                                              <div className="mt-2 flex justify-between text-[10px] text-white/50 uppercase tracking-[0.2em]">
-                                                                  <span>1:00</span>
-                                                                  <span>59:59</span>
-                                                              </div>
-                                                          </div>
-                                                      ) : (
-                                                          <div className={`relative rounded-full bg-white/15 overflow-hidden ${isAIExpanded ? 'h-3 md:h-4' : 'h-8 md:h-10'}`}>
-                                                              <div
-                                                                  className="absolute inset-y-0 left-0 bg-emerald-400/90 transition-[width] duration-500 ease-out"
-                                                                  style={{ width: `${Math.max(0, (1 - runningProgress)) * 100}%` }}
-                                                              />
-                                                          </div>
-                                                      )}
-                                                  </div>
-                                              </div>
-                                          )}
                                       </>
                                   )}
                               </div>
@@ -806,8 +815,8 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
               <div className="flex flex-col items-center gap-4">
                   <div className="mx-auto w-full max-w-5xl px-4 md:px-8 pointer-events-auto">
                       <div className={`overflow-hidden transition-[max-height,opacity,transform] duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${isAIExpanded ? 'max-h-[45vh] opacity-100 translate-y-0' : 'max-h-0 opacity-0 translate-y-4'}`}>
-                          <div ref={chatPanelRef} className="h-[60vh] max-h-[72vh] min-h-[360px] rounded-3xl border border-white/10 bg-white/5 backdrop-blur-lg overflow-hidden shadow-[0_18px_40px_-30px_rgba(0,0,0,0.6)]">
-                              <div className="relative h-full dark flex flex-col min-h-0">
+                          <div ref={chatPanelRef} className="h-[40vh] min-h-[220px] rounded-3xl border border-white/10 bg-white/5 backdrop-blur-lg overflow-hidden shadow-[0_18px_40px_-30px_rgba(0,0,0,0.6)]">
+                              <div className="relative h-full dark">
                                   <button
                                       onClick={handleCollapseAI}
                                       className="absolute right-3 top-3 z-10 text-[10px] uppercase tracking-widest font-bold text-white/60 hover:text-white bg-black/30 border border-white/10 px-3 py-1 rounded-full"
@@ -825,20 +834,9 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                       </div>
                   </div>
 
-                  <div
-                      className={`pointer-events-auto transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${
-                          isAIExpanded
-                              ? 'w-full px-4 md:px-8 lg:fixed lg:right-6 lg:top-28 lg:w-[280px] xl:lg:w-[320px] lg:px-0 lg:translate-x-0 lg:opacity-100'
-                              : 'w-full px-4 md:px-8 translate-y-0 opacity-100'
-                      }`}
-                  >
-                      <div className={`${isAIExpanded ? 'lg:w-full' : 'mx-auto w-full max-w-2xl'}`}>
-                          <SpotifyPlayer
-                              className="w-full"
-                              layout={isAIExpanded ? 'vertical' : 'horizontal'}
-                              onArtworkChange={handleSpotifyArtworkChange}
-                              onMenuToggle={setIsMixesOpen}
-                          />
+                  <div className="w-full px-4 md:px-8 pointer-events-auto">
+                      <div className="mx-auto w-full max-w-2xl">
+                          <SpotifyPlayer className="w-full" onArtworkChange={handleSpotifyArtworkChange} onMenuToggle={setIsMixesOpen} />
                       </div>
                   </div>
 
