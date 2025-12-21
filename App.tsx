@@ -19,6 +19,19 @@ import { initSpotifyAuth } from './services/authService';
 import { UserProfile, ChatMessage, MemoryNote, ChatSession } from './types';
 
 const App: React.FC = () => {
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token')) {
+      const token = new URLSearchParams(hash.replace('#', '?')).get('access_token');
+      if (token) {
+        console.log('✅ Spotify Token Found:', token);
+        localStorage.setItem('spotify_token', token);
+        window.location.hash = '';
+        window.location.reload();
+      }
+    }
+  }, []);
+
   const [fullPageChatOpen, setFullPageChatOpen] = useState(false);
   const [techModalOpen, setTechModalOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
