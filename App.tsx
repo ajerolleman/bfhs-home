@@ -64,6 +64,7 @@ const App: React.FC = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
   const [isSpotifyPlaying, setIsSpotifyPlaying] = useState(false);
+  const [isHomeSpotifyVisible, setIsHomeSpotifyVisible] = useState(true);
   const headerRef = useRef<HTMLDivElement>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
 
@@ -261,7 +262,13 @@ const App: React.FC = () => {
                     <AIQuickBar onSearch={handleSearch} onOpenChat={() => { if (!currentSession) setCurrentSession(createNewSession()); setFullPageChatOpen(true); }} />
                     {spotifyToken && (
                         <div className="w-full max-w-3xl px-4">
-                            <SpotifyPlayer className="w-full" tone="light" />
+                            <button
+                                onClick={() => setIsHomeSpotifyVisible((prev) => !prev)}
+                                className="mb-3 px-3 py-1.5 rounded-full border border-gray-300 text-[10px] uppercase tracking-[0.2em] text-gray-600 hover:text-gray-900 hover:border-gray-400 transition"
+                            >
+                                {isHomeSpotifyVisible ? 'Hide Spotify' : 'Show Spotify'}
+                            </button>
+                            {isHomeSpotifyVisible && <SpotifyPlayer className="w-full" tone="light" />}
                         </div>
                     )}
                 </div>
