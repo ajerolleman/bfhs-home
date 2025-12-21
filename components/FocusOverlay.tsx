@@ -474,13 +474,13 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                               backgroundImage: `url(${spotifyArtworkUrl})`,
                               backgroundSize: 'cover',
                               backgroundPosition: 'center',
-                              filter: 'blur(34px) brightness(0.7) saturate(1.2)',
+                              filter: 'blur(36px) brightness(0.55) saturate(1.15)',
                               transform: 'scale(1.2)',
                               opacity: 0.85
                           }}
                       />
-                      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(120deg,rgba(6,20,14,0.9),rgba(10,28,20,0.8),rgba(4,14,10,0.92))]" />
-                      <div className="absolute inset-0 pointer-events-none bg-black/20" />
+                      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(120deg,rgba(4,14,10,0.96),rgba(8,22,16,0.92),rgba(3,10,8,0.98))]" />
+                      <div className="absolute inset-0 pointer-events-none bg-black/35" />
                   </>
               )}
               <div className="flex items-center gap-6">
@@ -488,18 +488,22 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                       <img 
                           src="https://static.wixstatic.com/media/e6bdc9_9e876e6d3ee44a9e860f83e8afc9774a~mv2.png/v1/fill/w_208,h_200,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Primary%20Logo%20in%20white%20no%20TEXT.png"
                           alt="BFHS Internal"
-                          className="w-5 h-5 object-contain"
+                          className={`w-5 h-5 object-contain ${hasArtwork ? 'brightness-150 drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : ''}`}
                       />
                   </div>
                   <div>
-                      <div className={`text-[10px] uppercase font-bold tracking-widest ${hasArtwork ? 'text-white' : 'text-falcon-gold'}`}>BFHS Internal</div>
-                      <div className={`text-sm font-bold ${hasArtwork ? 'text-white' : ''}`}>Focus</div>
+                      <div className={`text-[10px] uppercase font-bold tracking-widest ${hasArtwork ? 'text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.7)]' : 'text-falcon-gold'}`}>BFHS Internal</div>
+                      <div className={`text-sm font-bold ${hasArtwork ? 'text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.7)]' : ''}`}>Focus</div>
                   </div>
                   <div className="hidden sm:block">
-                      <DayTicker userProfile={userProfile} />
+                      <div className={hasArtwork ? 'text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.6)]' : ''}>
+                          <DayTicker userProfile={userProfile} />
+                      </div>
                   </div>
                   <div className="sm:hidden">
-                      <DayTicker userProfile={userProfile} />
+                      <div className={hasArtwork ? 'text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.6)]' : ''}>
+                          <DayTicker userProfile={userProfile} />
+                      </div>
                   </div>
               </div>
 
@@ -521,7 +525,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
 
               <div className="flex items-center gap-3">
                   <div className="hidden lg:flex items-center gap-2">
-                      <span className={`text-[10px] uppercase font-bold tracking-widest ${hasArtwork ? 'text-white' : 'text-white/50'}`}>Background</span>
+                      <span className={`text-[10px] uppercase font-bold tracking-widest ${hasArtwork ? 'text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.7)]' : 'text-white/50'}`}>Background</span>
                       <div className="flex items-center gap-2">
                               {(['calm', 'forest', 'dusk'] as const).map((mode) => (
                                   <button
@@ -531,7 +535,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                           backgroundMode === mode
                                               ? 'border-falcon-gold/40 text-falcon-gold bg-white/5'
                                               : hasArtwork
-                                              ? 'border-white/40 text-white'
+                                              ? 'border-white/70 text-white bg-white/10 shadow-[0_0_10px_rgba(255,255,255,0.35)]'
                                               : 'border-white/10 text-gray-400'
                                       }`}
                                   >
@@ -542,7 +546,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                   </div>
                   <button 
                      onClick={onExit} 
-                     className={`text-xs font-bold uppercase tracking-wider transition-colors ${hasArtwork ? 'text-white hover:text-white' : 'text-gray-400 hover:text-white'}`}
+                     className={`text-xs font-bold uppercase tracking-wider transition-colors ${hasArtwork ? 'text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.7)]' : 'text-gray-400 hover:text-white'}`}
                   >
                       Exit (ESC)
                   </button>
