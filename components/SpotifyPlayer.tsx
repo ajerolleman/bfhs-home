@@ -205,10 +205,11 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => setIsMenuOpen((prev) => !prev)}
-                        className="px-3 py-1.5 rounded-full border border-white/20 text-[10px] uppercase tracking-[0.2em] text-white/80 hover:text-white hover:border-white/60 transition"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/20 text-[10px] uppercase tracking-[0.2em] text-white/80 hover:text-white hover:border-white/60 transition"
                         aria-expanded={isMenuOpen}
                     >
-                        {isMenuOpen ? 'Hide Mixes' : 'Pull Left Mixes'}
+                        <span className="text-xs font-bold">{'<'}</span>
+                        <span>{isMenuOpen ? 'Hide Mixes' : 'Pull Left Mixes'}</span>
                     </button>
                     <span className="text-[10px] uppercase tracking-[0.2em] text-white/50">{selectedLabel}</span>
                 </div>
@@ -232,8 +233,8 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
             </div>
 
             <div
-                className={`absolute left-0 top-12 w-[240px] max-w-[75vw] rounded-2xl border border-white/15 bg-white/10 backdrop-blur-2xl shadow-[0_24px_60px_-30px_rgba(0,0,0,0.75)] transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${
-                    isMenuOpen ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 -translate-x-6 pointer-events-none'
+                className={`absolute right-full top-1/2 -translate-y-1/2 mr-4 w-[260px] max-w-[70vw] rounded-2xl border border-white/15 bg-white/10 backdrop-blur-2xl shadow-[0_24px_60px_-30px_rgba(0,0,0,0.75)] transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${
+                    isMenuOpen ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 translate-x-4 pointer-events-none'
                 }`}
             >
                 <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
