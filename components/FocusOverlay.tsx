@@ -484,11 +484,11 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                   </>
               )}
               <div className="flex items-center gap-6">
-                  <div className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-full bg-white/10 border border-white/10 flex items-center justify-center overflow-hidden">
                       <img 
                           src="https://static.wixstatic.com/media/e6bdc9_9e876e6d3ee44a9e860f83e8afc9774a~mv2.png/v1/fill/w_208,h_200,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Primary%20Logo%20in%20white%20no%20TEXT.png"
                           alt="BFHS Internal"
-                          className={`w-5 h-5 object-contain ${hasArtwork ? 'brightness-150 drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : ''}`}
+                          className={`w-full h-full object-cover scale-110 ${hasArtwork ? 'brightness-150 drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : ''}`}
                       />
                   </div>
                   <div>
@@ -538,7 +538,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                                                   : 'border-white text-white bg-white/12 shadow-[0_0_10px_rgba(255,255,255,0.45)]'
                                               : backgroundMode === mode
                                               ? 'border-falcon-gold/40 text-falcon-gold bg-white/5'
-                                              : 'border-white/10 text-gray-400'
+                                              : 'border-white/40 text-white/70'
                                       }`}
                                   >
                                   {mode}
