@@ -151,6 +151,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const parkingInputRef = useRef<HTMLInputElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const aiDockRef = useRef<HTMLDivElement>(null);
+  const chatPanelRef = useRef<HTMLDivElement>(null);
 
   const stopAmbience = useCallback(() => {
       const nodes = ambienceRef.current;
@@ -231,22 +232,22 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       if (!isActive) setIsAIExpanded(false);
   }, [isActive]);
 
-  useEffect(() => {
-      if (!isAIExpanded) return;
-      aiDockRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [isAIExpanded]);
+  const handleCollapseAI = () => {
+      setIsAIExpanded(false);
+      topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   useEffect(() => {
       if (!isAIExpanded) return;
       const handleOutside = (event: MouseEvent) => {
           const target = event.target as Node;
-          if (aiDockRef.current && !aiDockRef.current.contains(target)) {
-              setIsAIExpanded(false);
+          if (!chatPanelRef.current || !chatPanelRef.current.contains(target)) {
+              handleCollapseAI();
           }
       };
       document.addEventListener('mousedown', handleOutside);
       return () => document.removeEventListener('mousedown', handleOutside);
-  }, [isAIExpanded]);
+  }, [isAIExpanded, handleCollapseAI]);
 
   const triggerSound = (type: 'tick' | 'press' | 'chime' | 'soft-tick') => {
       if (isSoundEnabled && audioCtxRef.current) {
@@ -369,11 +370,6 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       triggerSound('press');
   };
 
-  const handleCollapseAI = () => {
-      setIsAIExpanded(false);
-      topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
   // --- Visuals ---
   const formatTime = (totalSeconds: number) => {
       const m = Math.floor(totalSeconds / 60);
@@ -445,7 +441,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
           </div>
 
           {/* Scrollable Body */}
-          <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth">
+          <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth pb-56">
               <div ref={topRef} className="h-0 w-full" />
               {/* Main Content */}
               <div className="flex flex-col items-center px-4 md:px-8 pt-6 pb-10">
@@ -697,46 +693,47 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                   </div>
               </div>
 
-              {/* AI Dock */}
-              <div ref={aiDockRef} className="sticky bottom-0 w-full pb-6 pt-2 z-20">
-                  <div className="bg-gradient-to-t from-[#0B1310]/90 via-[#0B1310]/70 to-transparent backdrop-blur-xl">
-                      <div className="mx-auto w-full max-w-5xl px-4 md:px-8">
-                          <div className={`overflow-hidden transition-[max-height,opacity,transform] duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${isAIExpanded ? 'max-h-[45vh] opacity-100 translate-y-0 pointer-events-auto' : 'max-h-0 opacity-0 translate-y-4 pointer-events-none'}`}>
-                              <div className="h-[40vh] min-h-[220px] rounded-3xl border border-white/10 bg-white/5 backdrop-blur-lg overflow-hidden shadow-[0_18px_40px_-30px_rgba(0,0,0,0.6)]">
-                                  <div className="relative h-full dark">
-                                      <button
-                                          onClick={handleCollapseAI}
-                                          className="absolute right-3 top-3 z-10 text-[10px] uppercase tracking-widest font-bold text-white/60 hover:text-white bg-black/30 border border-white/10 px-3 py-1 rounded-full"
-                                      >
-                                          Push Down
-                                      </button>
-                                      <ChatPanel 
-                                          messages={currentSession?.messages || []}
-                                          isLoading={isSending}
-                                          userProfile={userProfile}
-                                          onSignInRequest={onSignIn}
-                                      />
-                                  </div>
+          </div>
+
+          {/* AI Dock */}
+          <div ref={aiDockRef} className="fixed bottom-0 left-0 right-0 pb-6 pt-3 z-30">
+              <div className="bg-gradient-to-t from-[#0B1310]/95 via-[#0B1310]/80 to-transparent backdrop-blur-xl">
+                  <div className="mx-auto w-full max-w-5xl px-4 md:px-8">
+                      <div className={`overflow-hidden transition-[max-height,opacity,transform] duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${isAIExpanded ? 'max-h-[45vh] opacity-100 translate-y-0 pointer-events-auto' : 'max-h-0 opacity-0 translate-y-4 pointer-events-none'}`}>
+                          <div ref={chatPanelRef} className="h-[40vh] min-h-[220px] rounded-3xl border border-white/10 bg-white/5 backdrop-blur-lg overflow-hidden shadow-[0_18px_40px_-30px_rgba(0,0,0,0.6)]">
+                              <div className="relative h-full dark">
+                                  <button
+                                      onClick={handleCollapseAI}
+                                      className="absolute right-3 top-3 z-10 text-[10px] uppercase tracking-widest font-bold text-white/60 hover:text-white bg-black/30 border border-white/10 px-3 py-1 rounded-full"
+                                  >
+                                      Push Down
+                                  </button>
+                                  <ChatPanel 
+                                      messages={currentSession?.messages || []}
+                                      isLoading={isSending}
+                                      userProfile={userProfile}
+                                      onSignInRequest={onSignIn}
+                                  />
                               </div>
                           </div>
                       </div>
+                  </div>
 
-                      <div className="mt-4 flex justify-center px-4 md:px-8">
-                          <div className="w-full max-w-2xl">
-                              <SpotifyPlayer className="w-full" />
-                          </div>
+                  <div className="mt-4 flex justify-center px-4 md:px-8">
+                      <div className="w-full max-w-2xl">
+                          <SpotifyPlayer className="w-full" />
                       </div>
+                  </div>
 
-                      <div className="mt-4 px-4 md:px-8">
-                          <AIQuickBar 
-                              onSearch={onSearch}
-                              onOpenChat={() => {}}
-                              onExpandChange={(expanded) => {
-                                  if (expanded) setIsAIExpanded(true);
-                              }}
-                              hideChips={true}
-                          />
-                      </div>
+                  <div className="mt-4 px-4 md:px-8">
+                      <AIQuickBar 
+                          onSearch={onSearch}
+                          onOpenChat={() => {}}
+                          onExpandChange={(expanded) => {
+                              if (expanded) setIsAIExpanded(true);
+                          }}
+                          hideChips={true}
+                      />
                   </div>
               </div>
           </div>
