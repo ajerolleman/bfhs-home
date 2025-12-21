@@ -236,6 +236,18 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       aiDockRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [isAIExpanded]);
 
+  useEffect(() => {
+      if (!isAIExpanded) return;
+      const handleOutside = (event: MouseEvent) => {
+          const target = event.target as Node;
+          if (aiDockRef.current && !aiDockRef.current.contains(target)) {
+              setIsAIExpanded(false);
+          }
+      };
+      document.addEventListener('mousedown', handleOutside);
+      return () => document.removeEventListener('mousedown', handleOutside);
+  }, [isAIExpanded]);
+
   const triggerSound = (type: 'tick' | 'press' | 'chime' | 'soft-tick') => {
       if (isSoundEnabled && audioCtxRef.current) {
           playSound(type, audioCtxRef.current);
@@ -681,9 +693,6 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                               </div>
                               <p className="text-[11px] text-white/60">Timebox + single-tasking keeps focus steady.</p>
                           </div>
-                          <div className="mt-6">
-                              <SpotifyPlayer className="w-full" />
-                          </div>
                       </div>
                   </div>
               </div>
@@ -712,7 +721,13 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                           </div>
                       </div>
 
-                      <div className="mt-3 px-4 md:px-8">
+                      <div className="mt-4 flex justify-center px-4 md:px-8">
+                          <div className="w-full max-w-2xl">
+                              <SpotifyPlayer className="w-full" />
+                          </div>
+                      </div>
+
+                      <div className="mt-4 px-4 md:px-8">
                           <AIQuickBar 
                               onSearch={onSearch}
                               onOpenChat={() => {}}

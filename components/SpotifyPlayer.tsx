@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import SpotifyWebPlayback from 'react-spotify-web-playback';
 import { getSpotifyLoginUrl, initSpotifyAuth, clearSpotifyAuth } from '../services/authService';
 
@@ -20,10 +20,23 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris = DEFAULT_URIS, clas
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [selectedPlaylistId, setSelectedPlaylistId] = useState(PLAYLISTS[0].id);
     const [activeUris, setActiveUris] = useState<string[]>(uris);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         setActiveUris(uris);
     }, [uris]);
+
+    useEffect(() => {
+        if (!isMenuOpen) return;
+        const handleOutside = (event: MouseEvent) => {
+            const target = event.target as Node;
+            if (containerRef.current && !containerRef.current.contains(target)) {
+                setIsMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleOutside);
+        return () => document.removeEventListener('mousedown', handleOutside);
+    }, [isMenuOpen]);
 
     const selectedPlaylist = useMemo(
         () => PLAYLISTS.find((item) => item.id === selectedPlaylistId) || PLAYLISTS[0],
@@ -37,7 +50,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris = DEFAULT_URIS, clas
 
     if (!token) {
         return (
-            <div className={`relative w-full ${className || ''}`}>
+            <div ref={containerRef} className={`relative w-full ${className || ''}`}>
                 <div className="text-xs font-bold uppercase tracking-widest text-falcon-gold">Spotify Focus</div>
                 <p className="text-xs text-white/60 mt-2">Connect Spotify to add focus music.</p>
                 <button
@@ -54,7 +67,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris = DEFAULT_URIS, clas
     }
 
     return (
-        <div className={`relative w-full ${className || ''}`}>
+        <div ref={containerRef} className={`relative w-full ${className || ''}`}>
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <button
