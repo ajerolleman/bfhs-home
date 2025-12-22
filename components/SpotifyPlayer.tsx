@@ -182,7 +182,6 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
 
     useEffect(() => {
         if (!token || !preparePlayback) return;
-        setIsPlaying(false);
         let cancelled = false;
         const resolveWebPlayerId = async () => {
             try {
@@ -203,16 +202,29 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
                 return null;
             }
         };
+        const getPlaybackIsPlaying = async () => {
+            try {
+                const res = await fetch('https://api.spotify.com/v1/me/player', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (!res.ok) return false;
+                const data = await res.json();
+                return Boolean(data?.is_playing);
+            } catch (e) {
+                return false;
+            }
+        };
         const syncIfReady = async () => {
             if (cancelled) return false;
+            const shouldPlay = await getPlaybackIsPlaying();
             if (sdkDeviceIdRef.current) {
-                transferPlayback(false);
+                transferPlayback(shouldPlay);
                 fetchNowPlaying(0, true);
                 return true;
             }
             const deviceId = await resolveWebPlayerId();
             if (deviceId) {
-                transferPlayback(false, deviceId);
+                transferPlayback(shouldPlay, deviceId);
                 fetchNowPlaying(0, true);
                 return true;
             }
