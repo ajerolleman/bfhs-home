@@ -33,10 +33,10 @@ const News: React.FC = () => {
 
         {/* Modal Overlay */}
         {isModalOpen && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
                 {/* Backdrop */}
                 <div 
-                    className="absolute inset-0 bg-black/80 backdrop-blur-md transition-opacity animate-fade-in" 
+                    className="absolute inset-0 bg-black/85 backdrop-blur-lg transition-opacity animate-fade-in" 
                     onClick={() => setIsModalOpen(false)}
                 ></div>
                 
@@ -81,7 +81,7 @@ const News: React.FC = () => {
                         <iframe 
                             src={docLink} 
                             title="Daily Bulletin Preview"
-                            className="absolute inset-0 w-full h-full relative z-10"
+                            className="absolute left-0 right-0 bottom-0 top-6 w-full h-full relative z-10"
                             style={{ border: 'none' }}
                         ></iframe>
                     </div>

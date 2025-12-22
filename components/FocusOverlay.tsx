@@ -98,6 +98,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const [minutes, setMinutes] = useState(30);
   const [secondsRemaining, setSecondsRemaining] = useState(30 * 60);
   const [sessionTotalSeconds, setSessionTotalSeconds] = useState(30 * 60);
+  const [zoomScale, setZoomScale] = useState(1);
   
   // Settings & Data
   const [taskName, setTaskName] = useState('');
@@ -115,6 +116,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const [isAIExpanded, setIsAIExpanded] = useState(false);
   const [aiDockHeight, setAiDockHeight] = useState(240);
   const hasConversation = (currentSession?.messages?.length ?? 0) > 0;
+  const focusScale = 1.08;
   
   // Refs
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -128,6 +130,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const aiDockRef = useRef<HTMLDivElement>(null);
   const chatPanelRef = useRef<HTMLDivElement>(null);
   const lastSliderTickRef = useRef(0);
+  const baseDprRef = useRef(1);
   const updateAiDockHeight = useCallback(() => {
       if (!aiDockRef.current) return;
       const nextHeight = Math.ceil(aiDockRef.current.getBoundingClientRect().height);
@@ -219,15 +222,40 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       const originalHtmlOverflow = document.documentElement.style.overflow;
       const originalBodyHeight = document.body.style.height;
       const originalHtmlHeight = document.documentElement.style.height;
+      const originalRootFontSize = document.documentElement.style.fontSize;
+      const computedRootFontSize = parseFloat(window.getComputedStyle(document.documentElement).fontSize || '16');
       document.body.style.overflow = 'hidden';
       document.documentElement.style.overflow = 'hidden';
       document.body.style.height = '100%';
       document.documentElement.style.height = '100%';
+      document.documentElement.style.fontSize = `${computedRootFontSize * focusScale}px`;
       return () => {
           document.body.style.overflow = originalBodyOverflow;
           document.documentElement.style.overflow = originalHtmlOverflow;
           document.body.style.height = originalBodyHeight;
           document.documentElement.style.height = originalHtmlHeight;
+          document.documentElement.style.fontSize = originalRootFontSize;
+      };
+  }, [isActive]);
+
+  useEffect(() => {
+      if (!isActive) {
+          setZoomScale(1);
+          return;
+      }
+      baseDprRef.current = window.devicePixelRatio || 1;
+      const updateScale = () => {
+          const current = window.devicePixelRatio || 1;
+          const base = baseDprRef.current || 1;
+          const nextScale = current / base;
+          setZoomScale(nextScale || 1);
+      };
+      updateScale();
+      window.addEventListener('resize', updateScale);
+      window.visualViewport?.addEventListener('resize', updateScale);
+      return () => {
+          window.removeEventListener('resize', updateScale);
+          window.visualViewport?.removeEventListener('resize', updateScale);
       };
   }, [isActive]);
 
@@ -395,8 +423,20 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
 
   if (!isActive) return null;
 
+  const zoomStyle: React.CSSProperties = {
+      transform: `scale(${1 / zoomScale})`,
+      transformOrigin: 'top left',
+      width: `${100 * zoomScale}vw`,
+      height: `${100 * zoomScale}vh`,
+      right: 'auto',
+      bottom: 'auto'
+  };
+
   return (
-    <div className={`fixed inset-0 z-[150] text-white overflow-hidden overscroll-none select-none font-sans ${activeBackgroundMode === 'dusk' ? 'bg-[#0C101B]' : 'bg-[#0B1310]'}`}>
+    <div
+      className={`fixed inset-0 z-[150] text-white overflow-hidden overscroll-none select-none font-sans ${activeBackgroundMode === 'dusk' ? 'bg-[#0C101B]' : 'bg-[#0B1310]'}`}
+      style={zoomStyle}
+    >
       {/* Background */}
       <div className={`fixed inset-0 ${
           activeBackgroundMode === 'forest'

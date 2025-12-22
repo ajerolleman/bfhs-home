@@ -285,8 +285,10 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
         setSelectedLabel(label);
         playRequestRef.current = Date.now();
         setIsPlaying(true);
+        fetchNowPlaying(0, true);
         startPlayback(nextUris);
-    }, [startPlayback]);
+        fetchNowPlaying(700, true);
+    }, [startPlayback, fetchNowPlaying]);
 
     const togglePlayback = useCallback(async () => {
         if (!token) return;
@@ -353,7 +355,8 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
                 return;
             }
             if (label.includes('next') || label.includes('previous') || label.includes('skip')) {
-                fetchNowPlaying(200, true);
+                fetchNowPlaying(0, true);
+                fetchNowPlaying(600, true);
             }
         };
         container.addEventListener('click', handleClick, true);
