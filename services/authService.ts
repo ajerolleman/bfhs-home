@@ -69,22 +69,26 @@ const clearHash = () => {
 
 const storeToken = (token: string, expiresIn?: string | null) => {
     localStorage.setItem(TOKEN_KEY, token);
+    sessionStorage.setItem(TOKEN_KEY, token);
     if (expiresIn) {
         const expiresAt = Date.now() + Number(expiresIn) * 1000;
         localStorage.setItem(EXPIRES_KEY, String(expiresAt));
+        sessionStorage.setItem(EXPIRES_KEY, String(expiresAt));
     }
 };
 
 export const clearSpotifyAuth = () => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(EXPIRES_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(EXPIRES_KEY);
 };
 
 export const getStoredSpotifyToken = () => {
-    const token = localStorage.getItem(TOKEN_KEY);
+    const token = localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
     if (!token) return null;
 
-    const expiresAt = localStorage.getItem(EXPIRES_KEY);
+    const expiresAt = localStorage.getItem(EXPIRES_KEY) || sessionStorage.getItem(EXPIRES_KEY);
     if (expiresAt && Date.now() > Number(expiresAt)) {
         clearSpotifyAuth();
         return null;

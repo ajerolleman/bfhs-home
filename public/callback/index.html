@@ -32,9 +32,11 @@
           .then(function (data) {
             if (data && data.access_token) {
               localStorage.setItem('spotify_token', data.access_token);
+              sessionStorage.setItem('spotify_token', data.access_token);
               if (data.expires_in) {
                 var expiresAt = Date.now() + Number(data.expires_in) * 1000;
                 localStorage.setItem('spotify_token_expires_at', String(expiresAt));
+                sessionStorage.setItem('spotify_token_expires_at', String(expiresAt));
               }
             }
           })
