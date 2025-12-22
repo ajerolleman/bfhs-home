@@ -31,6 +31,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
     const [playerKey, setPlayerKey] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
     const artworkRef = useRef<string | null>(null);
+    const deviceIdRef = useRef<string | null>(null);
     const fetchAbortRef = useRef<AbortController | null>(null);
     const lastFetchRef = useRef(0);
     const lastPlaybackRef = useRef(0);
@@ -89,6 +90,10 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
             images?.[2]?.url ||
             null;
         updateArtwork(nextUrl);
+        const nextDeviceId = state?.currentDeviceId || state?.deviceId;
+        if (nextDeviceId) {
+            deviceIdRef.current = nextDeviceId;
+        }
         if (typeof state?.isPlaying === 'boolean') {
             if (state.isPlaying) {
                 setIsPlaying(true);
@@ -158,7 +163,11 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
             body = isContextUri ? { context_uri: nextUris[0] } : { uris: nextUris };
         }
         try {
-            const res = await fetch('https://api.spotify.com/v1/me/player/play', {
+            const deviceId = deviceIdRef.current;
+            const endpoint = deviceId
+                ? `https://api.spotify.com/v1/me/player/play?device_id=${encodeURIComponent(deviceId)}`
+                : 'https://api.spotify.com/v1/me/player/play';
+            const res = await fetch(endpoint, {
                 method: 'PUT',
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -177,6 +186,28 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
         fetchNowPlaying(200, true);
     }, [token, fetchNowPlaying]);
 
+    const pausePlayback = useCallback(async (retried = false) => {
+        if (!token) return;
+        try {
+            const deviceId = deviceIdRef.current;
+            const endpoint = deviceId
+                ? `https://api.spotify.com/v1/me/player/pause?device_id=${encodeURIComponent(deviceId)}`
+                : 'https://api.spotify.com/v1/me/player/pause';
+            const res = await fetch(endpoint, {
+                method: 'PUT',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (!res.ok && !retried) {
+                window.setTimeout(() => pausePlayback(true), 600);
+            }
+        } catch (e) {
+            if (!retried) {
+                window.setTimeout(() => pausePlayback(true), 600);
+            }
+        }
+        fetchNowPlaying(160, true);
+    }, [token, fetchNowPlaying]);
+
     const handleMixSelect = useCallback((nextId: string | null, label: string, nextUris?: string[]) => {
         setSelectedPlaylistId(nextId);
         setActiveUris(nextUris && nextUris.length ? nextUris : undefined);
@@ -191,20 +222,14 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
         const nextPlayState = !isPlaying;
         if (nextPlayState) {
             playRequestRef.current = Date.now();
+            setIsPlaying(true);
+            await startPlayback(activeUris);
         } else {
             playRequestRef.current = 0;
+            setIsPlaying(false);
+            await pausePlayback();
         }
-        setIsPlaying(nextPlayState);
-        try {
-            await fetch(`https://api.spotify.com/v1/me/player/${nextPlayState ? 'play' : 'pause'}`, {
-                method: 'PUT',
-                headers: { Authorization: `Bearer ${token}` }
-            });
-        } catch (e) {
-            // Ignore transient playback failures.
-        }
-        fetchNowPlaying(200, true);
-    }, [token, isPlaying, fetchNowPlaying]);
+    }, [token, isPlaying, startPlayback, pausePlayback, activeUris]);
 
     useEffect(() => {
         onMenuToggle?.(isMenuOpen);
@@ -243,8 +268,16 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
             const button = target?.closest('button');
             if (!button) return;
             const label = button.getAttribute('aria-label')?.toLowerCase() || '';
-            if (label.includes('play') || label.includes('pause')) {
-                fetchNowPlaying(120, true);
+            if (label.includes('play')) {
+                playRequestRef.current = Date.now();
+                setIsPlaying(true);
+                startPlayback(activeUris);
+                return;
+            }
+            if (label.includes('pause')) {
+                playRequestRef.current = 0;
+                setIsPlaying(false);
+                pausePlayback();
                 return;
             }
             if (label.includes('next') || label.includes('previous') || label.includes('skip')) {
@@ -253,7 +286,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
         };
         container.addEventListener('click', handleClick, true);
         return () => container.removeEventListener('click', handleClick, true);
-    }, [token, fetchNowPlaying]);
+    }, [token, fetchNowPlaying, startPlayback, pausePlayback, activeUris]);
 
     useEffect(() => {
         if (!token) return;
@@ -460,6 +493,9 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
                                         key={`spotify-player-${playerKey}`}
                                         token={token}
                                         uris={activeUris}
+                                        persistDeviceSelection={true}
+                                        syncExternalDevice={true}
+                                        syncExternalDeviceInterval={5}
                                         callback={handlePlayback}
                                         layout="compact"
                                         hideCoverArt={true}
