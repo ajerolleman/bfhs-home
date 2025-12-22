@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 const News: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -32,7 +33,7 @@ const News: React.FC = () => {
         </div>
 
         {/* Modal Overlay */}
-        {isModalOpen && (
+        {isModalOpen && typeof document !== 'undefined' && createPortal(
             <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
                 {/* Backdrop */}
                 <div 
@@ -86,7 +87,8 @@ const News: React.FC = () => {
                         ></iframe>
                     </div>
                 </div>
-            </div>
+            </div>,
+            document.body
         )}
     </div>
   );

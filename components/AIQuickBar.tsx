@@ -11,9 +11,10 @@ interface AIQuickBarProps {
     hideChips?: boolean;
     searchMode?: 'bfhs-only' | 'bfhs-google';
     placeholder?: string;
+    lockScrollOnFocus?: boolean;
 }
 
-const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpenChat, onBarFocus, docked, hideChips, searchMode = 'bfhs-google', placeholder }) => {
+const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpenChat, onBarFocus, docked, hideChips, searchMode = 'bfhs-google', placeholder, lockScrollOnFocus = true }) => {
     const [query, setQuery] = useState('');
     const [isFocused, setIsFocused] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -50,7 +51,7 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
     }, [isExpanded, onExpandChange]);
 
     useEffect(() => {
-        if (!isFocused || docked) return;
+        if (!isFocused || docked || !lockScrollOnFocus) return;
         const scrollTop = window.scrollY || window.pageYOffset || 0;
         scrollLockRef.current = {
             top: scrollTop,

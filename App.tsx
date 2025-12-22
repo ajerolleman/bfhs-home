@@ -70,6 +70,8 @@ const App: React.FC = () => {
   const [isMixesOpen, setIsMixesOpen] = useState(false);
   const [homeSpotifySlot, setHomeSpotifySlot] = useState<HTMLDivElement | null>(null);
   const [focusSpotifySlot, setFocusSpotifySlot] = useState<HTMLDivElement | null>(null);
+  const [isDashboardBarExpanded, setIsDashboardBarExpanded] = useState(false);
+  const overflowXRef = useRef<{ body: string; html: string } | null>(null);
   const spotifyMountRef = useRef<HTMLDivElement | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
@@ -120,6 +122,38 @@ const App: React.FC = () => {
         document.body.style.overflow = '';
     }
     return () => { document.body.style.overflow = ''; };
+  }, [fullPageChatOpen, isFocusMode]);
+
+  useEffect(() => {
+    if (fullPageChatOpen || isFocusMode) return;
+    if (!isDashboardBarExpanded) {
+      if (overflowXRef.current) {
+        document.body.style.overflowX = overflowXRef.current.body;
+        document.documentElement.style.overflowX = overflowXRef.current.html;
+        overflowXRef.current = null;
+      }
+      return;
+    }
+    if (!overflowXRef.current) {
+      overflowXRef.current = {
+        body: document.body.style.overflowX,
+        html: document.documentElement.style.overflowX
+      };
+    }
+    document.body.style.overflowX = 'hidden';
+    document.documentElement.style.overflowX = 'hidden';
+    return () => {
+      if (!overflowXRef.current) return;
+      document.body.style.overflowX = overflowXRef.current.body;
+      document.documentElement.style.overflowX = overflowXRef.current.html;
+      overflowXRef.current = null;
+    };
+  }, [isDashboardBarExpanded, fullPageChatOpen, isFocusMode]);
+
+  useEffect(() => {
+    if (fullPageChatOpen || isFocusMode) {
+      setIsDashboardBarExpanded(false);
+    }
   }, [fullPageChatOpen, isFocusMode]);
 
   useEffect(() => {
@@ -307,6 +341,8 @@ const App: React.FC = () => {
                     <AIQuickBar
                       onSearch={handleSearch}
                       onOpenChat={() => { if (!currentSession) setCurrentSession(createNewSession()); setFullPageChatOpen(true); }}
+                      onExpandChange={setIsDashboardBarExpanded}
+                      lockScrollOnFocus={false}
                       searchMode="bfhs-google"
                     />
                     {spotifyToken && (
@@ -341,7 +377,7 @@ const App: React.FC = () => {
                 </div>
             </div>
             
-            <main className={`container mx-auto px-4 py-4 max-w-[1200px] space-y-16 relative z-10 transition-all duration-700 ease-spring ${fullPageChatOpen ? 'opacity-0 pointer-events-none scale-95 blur-sm' : 'opacity-100 scale-100 blur-0'}`}>
+            <main className={`container mx-auto px-4 py-4 pb-16 max-w-[1200px] space-y-16 relative z-10 transition-all duration-700 ease-spring ${fullPageChatOpen ? 'opacity-0 pointer-events-none scale-95 blur-sm' : 'opacity-100 scale-100 blur-0'}`}>
                   
                   <div className="space-y-12">
                       <News />
@@ -362,7 +398,7 @@ const App: React.FC = () => {
               topOffset={headerHeight}
               composer={<AIQuickBar onSearch={handleSearch} docked={true} searchMode="bfhs-only" />}
             >
-                <ChatPanel messages={currentSession?.messages || []} isLoading={isSending} userProfile={userProfile} onSignInRequest={() => setIsProfileModalOpen(true)} />
+                <ChatPanel messages={currentSession?.messages || []} isLoading={isSending} userProfile={userProfile} onSignInRequest={() => setIsProfileModalOpen(true)} hideInitialVerifiedSource={true} />
             </ChatOverlay>
 
             <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} user={currentUser} profile={userProfile} onProfileUpdate={setUserProfile} authMessage={authError} />

@@ -72,7 +72,14 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
                     <h2 className="font-header text-lg tracking-wide">BFHS Chat</h2>
                 </div>
                 
-                <div className="flex-1 flex justify-end">
+                <div className="flex-1 flex justify-end gap-2">
+                    <button 
+                        onClick={onClose}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-full text-xs font-bold uppercase tracking-wider transition-colors"
+                        title="Exit (Esc)"
+                    >
+                        <span>Esc</span>
+                    </button>
                     <button 
                         onClick={() => setShowHistory(true)}
                         className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-full text-xs font-bold uppercase tracking-wider transition-colors"
