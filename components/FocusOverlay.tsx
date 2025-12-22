@@ -116,7 +116,6 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const [isAIExpanded, setIsAIExpanded] = useState(false);
   const [aiDockHeight, setAiDockHeight] = useState(240);
   const hasConversation = (currentSession?.messages?.length ?? 0) > 0;
-  const focusScale = 1.08;
   
   // Refs
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -130,7 +129,8 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const aiDockRef = useRef<HTMLDivElement>(null);
   const chatPanelRef = useRef<HTMLDivElement>(null);
   const lastSliderTickRef = useRef(0);
-  const baseDprRef = useRef(1);
+  const baseDprRef = useRef<number | null>(null);
+  const hadFullscreenRef = useRef(false);
   const updateAiDockHeight = useCallback(() => {
       if (!aiDockRef.current) return;
       const nextHeight = Math.ceil(aiDockRef.current.getBoundingClientRect().height);
@@ -222,31 +222,55 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       const originalHtmlOverflow = document.documentElement.style.overflow;
       const originalBodyHeight = document.body.style.height;
       const originalHtmlHeight = document.documentElement.style.height;
-      const originalRootFontSize = document.documentElement.style.fontSize;
-      const computedRootFontSize = parseFloat(window.getComputedStyle(document.documentElement).fontSize || '16');
       document.body.style.overflow = 'hidden';
       document.documentElement.style.overflow = 'hidden';
       document.body.style.height = '100%';
       document.documentElement.style.height = '100%';
-      document.documentElement.style.fontSize = `${computedRootFontSize * focusScale}px`;
       return () => {
           document.body.style.overflow = originalBodyOverflow;
           document.documentElement.style.overflow = originalHtmlOverflow;
           document.body.style.height = originalBodyHeight;
           document.documentElement.style.height = originalHtmlHeight;
-          document.documentElement.style.fontSize = originalRootFontSize;
       };
   }, [isActive]);
+
+  useEffect(() => {
+      if (!isActive) return;
+      const handleKeyDown = (event: KeyboardEvent) => {
+          if (event.key === 'Escape') {
+              event.preventDefault();
+              onExit();
+          }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isActive, onExit]);
+
+  useEffect(() => {
+      if (!isActive) return;
+      hadFullscreenRef.current = Boolean(document.fullscreenElement);
+      const handleFullscreenChange = () => {
+          if (document.fullscreenElement) {
+              hadFullscreenRef.current = true;
+              return;
+          }
+          if (hadFullscreenRef.current) {
+              onExit();
+          }
+      };
+      document.addEventListener('fullscreenchange', handleFullscreenChange);
+      return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, [isActive, onExit]);
 
   useEffect(() => {
       if (!isActive) {
           setZoomScale(1);
           return;
       }
-      baseDprRef.current = window.devicePixelRatio || 1;
+      const getViewportScale = () => window.visualViewport?.scale || 1;
       const updateScale = () => {
-          const current = window.devicePixelRatio || 1;
-          const base = baseDprRef.current || 1;
+          const current = (window.devicePixelRatio || 1) / getViewportScale();
+          const base = baseDprRef.current || current;
           const nextScale = current / base;
           setZoomScale(nextScale || 1);
       };
@@ -258,6 +282,12 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
           window.visualViewport?.removeEventListener('resize', updateScale);
       };
   }, [isActive]);
+
+  useEffect(() => {
+      if (baseDprRef.current !== null) return;
+      const baseViewport = window.visualViewport?.scale || 1;
+      baseDprRef.current = (window.devicePixelRatio || 1) / baseViewport;
+  }, []);
 
   const handleCollapseAI = () => {
       setIsAIExpanded(false);
@@ -541,14 +571,14 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
           {/* Scrollable Body */}
           <div className={`flex-1 min-h-0 overflow-hidden flex flex-col ${
               showHeaderTimer
-                  ? 'pt-[120px] md:pt-[136px]'
+                  ? 'pt-[104px] md:pt-[116px]'
                   : isAIExpanded
-                  ? 'pt-[72px] md:pt-[80px]'
-                  : 'pt-16 md:pt-[72px]'
+                  ? 'pt-[56px] md:pt-[64px]'
+                  : 'pt-12 md:pt-14'
           }`}>
               <div ref={topRef} className="h-0 w-full" />
-              {isFocusMode && isAIExpanded && (
-                  <div className="w-full flex justify-center pt-1 md:pt-2">
+              {isFocusMode && (
+                  <div className="w-full flex justify-center pt-0 md:pt-1 pb-2">
                       <div className="font-extrabold text-white tracking-tight leading-none text-4xl md:text-5xl lg:text-6xl">
                           {taskName || 'Focus Session'}
                       </div>
@@ -590,11 +620,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                       <div className={`flex-1 flex ${isFocusMode ? 'items-start' : 'items-center'} justify-center transform-gpu transition-transform duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)]`}>
                           <div className={`w-full max-w-3xl mx-auto ${isFocusMode ? 'pt-2' : ''}`}>
                               <div className={`flex flex-col items-center text-center ${isAIExpanded ? 'gap-3' : 'gap-4'}`}>
-                                  {isFocusMode && !isAIExpanded && (
-                                      <div className="font-extrabold text-white tracking-tight leading-none transition-transform duration-500 text-6xl md:text-7xl lg:text-8xl">
-                                          {taskName || 'Focus Session'}
-                                      </div>
-                                  )}
+                                  {isFocusMode && !isAIExpanded && null}
 
                                   {(state === 'running' || state === 'paused') && !isAIExpanded && (
                                       <div className="flex flex-wrap items-center justify-center gap-3">
@@ -824,8 +850,8 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
               <div className="flex flex-col items-center gap-4">
                   <div className="mx-auto w-full max-w-5xl px-4 md:px-8 pointer-events-auto">
                       <div className={`overflow-hidden transition-[max-height,opacity,transform] duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${isAIExpanded ? 'max-h-[45vh] opacity-100 translate-y-0' : 'max-h-0 opacity-0 translate-y-4'}`}>
-                          <div ref={chatPanelRef} className="h-[40vh] min-h-[220px] rounded-3xl border border-white/10 bg-white/5 backdrop-blur-lg overflow-hidden shadow-[0_18px_40px_-30px_rgba(0,0,0,0.6)]">
-                              <div className="relative h-full dark">
+                          <div ref={chatPanelRef} className="h-[55vh] min-h-[320px] rounded-3xl border border-white/10 bg-white/5 backdrop-blur-lg overflow-hidden shadow-[0_18px_40px_-30px_rgba(0,0,0,0.6)]">
+                              <div className="relative h-full dark flex flex-col min-h-0">
                                   <button
                                       onClick={handleCollapseAI}
                                       className="absolute right-3 top-3 z-10 text-[10px] uppercase tracking-widest font-bold text-white/60 hover:text-white bg-black/30 border border-white/10 px-3 py-1 rounded-full"

@@ -28,6 +28,14 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
+    const scrollLockRef = useRef<{
+        top: number;
+        bodyPosition: string;
+        bodyTop: string;
+        bodyWidth: string;
+        bodyOverflow: string;
+        htmlOverflow: string;
+    } | null>(null);
 
     const hasQuery = query.trim().length > 0;
     const showDropdown = isFocused && hasQuery;
@@ -40,6 +48,34 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
             onExpandChange(isExpanded);
         }
     }, [isExpanded, onExpandChange]);
+
+    useEffect(() => {
+        if (!isFocused || docked) return;
+        const scrollTop = window.scrollY || window.pageYOffset || 0;
+        scrollLockRef.current = {
+            top: scrollTop,
+            bodyPosition: document.body.style.position,
+            bodyTop: document.body.style.top,
+            bodyWidth: document.body.style.width,
+            bodyOverflow: document.body.style.overflow,
+            htmlOverflow: document.documentElement.style.overflow
+        };
+        document.documentElement.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${scrollTop}px`;
+        document.body.style.width = '100%';
+        document.body.style.overflow = 'hidden';
+        return () => {
+            const previous = scrollLockRef.current;
+            if (!previous) return;
+            document.documentElement.style.overflow = previous.htmlOverflow;
+            document.body.style.position = previous.bodyPosition;
+            document.body.style.top = previous.bodyTop;
+            document.body.style.width = previous.bodyWidth;
+            document.body.style.overflow = previous.bodyOverflow;
+            window.scrollTo(0, previous.top);
+        };
+    }, [isFocused, docked]);
 
     // Options configuration
     const options = [

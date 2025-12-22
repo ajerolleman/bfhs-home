@@ -34,10 +34,13 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     };
 
     const scrollToMessage = (msgId: string) => {
+        const container = containerRef.current;
         const element = messageRefs.current[msgId];
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        if (!container || !element) return;
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        const top = elementRect.top - containerRect.top + container.scrollTop;
+        container.scrollTo({ top, behavior: 'smooth' });
     };
 
     // Auto-scroll logic
