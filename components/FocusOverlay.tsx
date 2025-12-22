@@ -507,6 +507,13 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                   : 'pt-16 md:pt-[72px]'
           }`}>
               <div ref={topRef} className="h-0 w-full" />
+              {isFocusMode && isAIExpanded && (
+                  <div className="w-full flex justify-center pt-1 md:pt-2">
+                      <div className="font-extrabold text-white tracking-tight leading-none text-4xl md:text-5xl lg:text-6xl">
+                          {taskName || 'Focus Session'}
+                      </div>
+                  </div>
+              )}
               {/* Main Content */}
               <div
                   className={`relative w-full flex flex-col items-center px-4 md:px-8 flex-1 min-h-0 transform-gpu transition-[padding-bottom,transform] duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] justify-start ${
@@ -518,7 +525,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
               >
                   {showCenteredTimer && (
                       <div
-                          className={`absolute inset-x-0 ${isMixesOpen ? 'top-[38%]' : 'top-[42%]'} -translate-y-1/2 z-[110] pointer-events-none transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] flex items-center justify-center`}
+                          className="absolute inset-x-0 top-[42%] -translate-y-1/2 z-[110] pointer-events-none transition-all duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)] flex items-center justify-center"
                       >
                           <div className="text-center">
                               <div className={`font-mono font-bold text-white tracking-tight ${
@@ -543,14 +550,8 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
                       <div className={`flex-1 flex ${isFocusMode ? 'items-start' : 'items-center'} justify-center transform-gpu transition-transform duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)]`}>
                           <div className={`w-full max-w-3xl mx-auto ${isFocusMode ? 'pt-2' : ''}`}>
                               <div className={`flex flex-col items-center text-center ${isAIExpanded ? 'gap-3' : 'gap-4'}`}>
-                                  {isFocusMode && (
-                                      <div className={`font-extrabold text-white tracking-tight leading-none transition-transform duration-500 ${
-                                          isAIExpanded
-                                              ? 'text-4xl md:text-5xl lg:text-6xl -translate-y-12 md:-translate-y-16'
-                                              : isFocusMode
-                                              ? 'text-6xl md:text-7xl lg:text-8xl translate-y-0'
-                                              : 'text-5xl md:text-6xl lg:text-7xl'
-                                      }`}>
+                                  {isFocusMode && !isAIExpanded && (
+                                      <div className="font-extrabold text-white tracking-tight leading-none transition-transform duration-500 text-6xl md:text-7xl lg:text-8xl">
                                           {taskName || 'Focus Session'}
                                       </div>
                                   )}

@@ -17,6 +17,7 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
     const [query, setQuery] = useState('');
     const [isFocused, setIsFocused] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isMultiline, setIsMultiline] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [fileName, setFileName] = useState<string | null>(null);
     const [imageContent, setImageContent] = useState<string | null>(null);
@@ -78,6 +79,8 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
             
             textarea.style.height = `${newHeight}px`;
             textarea.style.overflowY = scrollHeight > MAX_HEIGHT ? 'auto' : 'hidden';
+            const lineHeight = parseFloat(window.getComputedStyle(textarea).lineHeight || '28');
+            setIsMultiline(scrollHeight > lineHeight + 4);
         };
 
         handleResize();
@@ -114,6 +117,7 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
         setFileName(null);
         setImageContent(null);
         setIsFocused(false);
+        setIsMultiline(false);
         textareaRef.current?.blur();
         if (textareaRef.current) textareaRef.current.style.height = 'auto';
     };
@@ -250,7 +254,7 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
                     )}
 
                     {/* Main Input Row - increased py-4 and gap-4 for a more spacious feel */}
-                    <div className={`flex gap-4 px-5 py-4 ${hasQuery ? 'items-end' : 'items-center'} min-h-[64px] transition-all duration-200`}>
+                    <div className={`flex gap-4 px-5 py-4 ${isMultiline ? 'items-end' : 'items-center'} min-h-[64px] transition-all duration-200`}>
                         
                         {/* 1. Plus Button */}
                         <div className="relative z-10 flex items-center justify-center h-10 w-10 shrink-0"> 
@@ -305,7 +309,7 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
                                 relative z-10 flex-1 bg-transparent border-none outline-none 
                                 text-[#E3E3E3] placeholder-white/50 font-normal min-w-0 
                                 resize-none overflow-hidden 
-                                p-0 m-0 py-[2px]
+                                p-0 m-0 py-0
                                 leading-[28px]
                                 ${imageContent ? 'text-falcon-gold font-medium' : ''} 
                                 text-lg md:text-xl

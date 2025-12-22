@@ -304,7 +304,11 @@ const App: React.FC = () => {
 
             <div className={`z-[40] flex justify-center transition-all duration-1000 ease-spring ${fullPageChatOpen ? 'opacity-0 pointer-events-none absolute' : 'opacity-100 relative py-12 md:py-16'}`}>
                 <div className={`w-full flex flex-col items-center ${spotifyToken ? 'gap-3' : 'gap-6'}`}>
-                    <AIQuickBar onSearch={handleSearch} onOpenChat={() => { if (!currentSession) setCurrentSession(createNewSession()); setFullPageChatOpen(true); }} />
+                    <AIQuickBar
+                      onSearch={handleSearch}
+                      onOpenChat={() => { if (!currentSession) setCurrentSession(createNewSession()); setFullPageChatOpen(true); }}
+                      searchMode="bfhs-google"
+                    />
                     {spotifyToken && (
                         <div className="w-full max-w-3xl px-4">
                             <button
@@ -349,7 +353,15 @@ const App: React.FC = () => {
                   </footer>
             </main>
 
-            <ChatOverlay isOpen={fullPageChatOpen} onClose={() => setFullPageChatOpen(false)} currentSession={currentSession} onSwitchSession={setCurrentSession} onNewChat={() => setCurrentSession(createNewSession())} topOffset={headerHeight} composer={<AIQuickBar onSearch={handleSearch} docked={true} />}>
+            <ChatOverlay
+              isOpen={fullPageChatOpen}
+              onClose={() => setFullPageChatOpen(false)}
+              currentSession={currentSession}
+              onSwitchSession={setCurrentSession}
+              onNewChat={() => setCurrentSession(createNewSession())}
+              topOffset={headerHeight}
+              composer={<AIQuickBar onSearch={handleSearch} docked={true} searchMode="bfhs-only" />}
+            >
                 <ChatPanel messages={currentSession?.messages || []} isLoading={isSending} userProfile={userProfile} onSignInRequest={() => setIsProfileModalOpen(true)} />
             </ChatOverlay>
 
