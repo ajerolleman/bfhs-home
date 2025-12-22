@@ -75,12 +75,13 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
             // Calculate new height (max 200px)
             const MAX_HEIGHT = 200;
             const scrollHeight = textarea.scrollHeight;
-            const newHeight = Math.max(28, Math.min(scrollHeight, MAX_HEIGHT));
+            const lineHeight = parseFloat(window.getComputedStyle(textarea).lineHeight || '28');
+            const isMulti = scrollHeight > lineHeight + 4;
+            const newHeight = isMulti ? Math.min(scrollHeight, MAX_HEIGHT) : lineHeight;
             
             textarea.style.height = `${newHeight}px`;
             textarea.style.overflowY = scrollHeight > MAX_HEIGHT ? 'auto' : 'hidden';
-            const lineHeight = parseFloat(window.getComputedStyle(textarea).lineHeight || '28');
-            setIsMultiline(scrollHeight > lineHeight + 4);
+            setIsMultiline(isMulti);
         };
 
         handleResize();

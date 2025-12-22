@@ -31,6 +31,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
     const [playlistError, setPlaylistError] = useState<string | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [playerKey, setPlayerKey] = useState(0);
+    const [sdkDeviceId, setSdkDeviceId] = useState<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const artworkRef = useRef<string | null>(null);
     const deviceIdRef = useRef<string | null>(null);
@@ -41,7 +42,6 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
     const retryCountRef = useRef(0);
     const loadStartRef = useRef(0);
     const playRequestRef = useRef(0);
-    const lastTransferRef = useRef(0);
 
     useEffect(() => {
         if (uris && uris.length > 0) {
@@ -97,11 +97,10 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
         const sdkDeviceId = state?.deviceId;
         if (sdkDeviceId) {
             sdkDeviceIdRef.current = sdkDeviceId;
+            setSdkDeviceId(sdkDeviceId);
         }
         if (sdkDeviceIdRef.current) {
             deviceIdRef.current = sdkDeviceIdRef.current;
-        } else if (state?.currentDeviceId) {
-            deviceIdRef.current = state.currentDeviceId;
         }
         if (typeof state?.isPlaying === 'boolean') {
             if (state.isPlaying) {
@@ -184,77 +183,10 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
     }, [token]);
 
     useEffect(() => {
-        if (!token || !preparePlayback) return;
-        let cancelled = false;
-        const resolveWebPlayerId = async () => {
-            try {
-                const res = await fetch('https://api.spotify.com/v1/me/player/devices', {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                if (!res.ok) return null;
-                const data = await res.json();
-                const devices = Array.isArray(data?.devices) ? data.devices : [];
-                const byName = devices.find((device: any) =>
-                    String(device?.name || '').toLowerCase().includes(PLAYER_NAME.toLowerCase())
-                );
-                const webPlayer = byName || devices.find((device: any) =>
-                    String(device?.name || '').toLowerCase().includes('spotify web player')
-                );
-                return webPlayer?.id || null;
-            } catch (e) {
-                return null;
-            }
-        };
-        const getPlaybackState = async () => {
-            try {
-                const res = await fetch('https://api.spotify.com/v1/me/player', {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                if (res.status === 204) {
-                    return { isPlaying: false, deviceId: null as string | null };
-                }
-                if (!res.ok) return { isPlaying: false, deviceId: null as string | null };
-                const data = await res.json();
-                return {
-                    isPlaying: Boolean(data?.is_playing),
-                    deviceId: data?.device?.id || null
-                };
-            } catch (e) {
-                return { isPlaying: false, deviceId: null as string | null };
-            }
-        };
-        const syncIfReady = async () => {
-            if (cancelled) return false;
-            const playback = await getPlaybackState();
-            const targetDeviceId = sdkDeviceIdRef.current || (await resolveWebPlayerId());
-            if (!targetDeviceId) return false;
-            if (playback.deviceId === targetDeviceId) {
-                deviceIdRef.current = targetDeviceId;
-                fetchNowPlaying(0, true);
-                return true;
-            }
-            const now = Date.now();
-            if (now - lastTransferRef.current < 1000) return false;
-            lastTransferRef.current = now;
-            transferPlayback(playback.isPlaying, targetDeviceId);
-            fetchNowPlaying(0, true);
-            return true;
-        };
-        syncIfReady();
-        let attempts = 0;
-        const interval = window.setInterval(async () => {
-            attempts += 1;
-            if (await syncIfReady()) {
-                window.clearInterval(interval);
-            } else if (attempts >= 12) {
-                window.clearInterval(interval);
-            }
-        }, 400);
-        return () => {
-            cancelled = true;
-            window.clearInterval(interval);
-        };
-    }, [token, preparePlayback, transferPlayback, fetchNowPlaying]);
+        if (!token || !preparePlayback || !sdkDeviceId) return;
+        transferPlayback(false, sdkDeviceId);
+        fetchNowPlaying(0, true);
+    }, [token, preparePlayback, sdkDeviceId, transferPlayback, fetchNowPlaying]);
 
     const startPlayback = useCallback(async (nextUris?: string[], retried = false) => {
         if (!token) return;
