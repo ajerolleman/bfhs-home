@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import Header from './components/Header';
 import QuickLinks from './components/QuickLinks';
 import News from './components/News';
@@ -69,18 +70,13 @@ const App: React.FC = () => {
   const [isMixesOpen, setIsMixesOpen] = useState(false);
   const [homeSpotifySlot, setHomeSpotifySlot] = useState<HTMLDivElement | null>(null);
   const [focusSpotifySlot, setFocusSpotifySlot] = useState<HTMLDivElement | null>(null);
-  const [spotifyFloatingStyle, setSpotifyFloatingStyle] = useState({
-    top: 0,
-    left: 0,
-    width: 0,
-    opacity: 0,
-    pointerEvents: 'none' as const,
-    transform: 'translate3d(0,8px,0)'
-  });
-  const [spotifyPlaceholderHeight, setSpotifyPlaceholderHeight] = useState(0);
-  const spotifyFloatingRef = useRef<HTMLDivElement>(null);
+  const spotifyMountRef = useRef<HTMLDivElement | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
+
+  if (!spotifyMountRef.current && typeof document !== 'undefined') {
+    spotifyMountRef.current = document.createElement('div');
+  }
 
   useEffect(() => {
     if (!spotifyToken) {
@@ -135,67 +131,27 @@ const App: React.FC = () => {
     return () => observer.disconnect();
   }, []);
 
-  const updateSpotifyPosition = useCallback(() => {
-    const shouldShowSpotify = Boolean(spotifyToken && (isFocusMode || (isHomeSpotifyVisible && !fullPageChatOpen)));
+  useEffect(() => {
+    if (!spotifyToken || !spotifyMountRef.current) return;
     const target = isFocusMode ? focusSpotifySlot : homeSpotifySlot;
-    if (!shouldShowSpotify || !target) {
-      setSpotifyFloatingStyle((prev) => ({
-        ...prev,
-        opacity: 0,
-        pointerEvents: 'none',
-        transform: 'translate3d(0,8px,0)'
-      }));
-      return;
+    if (!target) return;
+    if (!target.contains(spotifyMountRef.current)) {
+      target.appendChild(spotifyMountRef.current);
     }
-    const rect = target.getBoundingClientRect();
-    setSpotifyFloatingStyle({
-      top: rect.top,
-      left: rect.left,
-      width: rect.width,
-      opacity: 1,
-      pointerEvents: 'auto',
-      transform: 'translate3d(0,0,0)'
-    });
-  }, [spotifyToken, isFocusMode, isHomeSpotifyVisible, fullPageChatOpen, homeSpotifySlot, focusSpotifySlot]);
+  }, [spotifyToken, isFocusMode, homeSpotifySlot, focusSpotifySlot]);
 
-  useLayoutEffect(() => {
-    updateSpotifyPosition();
-  }, [updateSpotifyPosition]);
-
-  useEffect(() => {
-    let frame = 0;
-    const handle = () => {
-      if (frame) cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(updateSpotifyPosition);
-    };
-    window.addEventListener('resize', handle);
-    window.addEventListener('scroll', handle, true);
-    return () => {
-      if (frame) cancelAnimationFrame(frame);
-      window.removeEventListener('resize', handle);
-      window.removeEventListener('scroll', handle, true);
-    };
-  }, [updateSpotifyPosition]);
-
-  useEffect(() => {
-    const timeout = window.setTimeout(updateSpotifyPosition, 60);
-    return () => window.clearTimeout(timeout);
-  }, [isFocusMode, updateSpotifyPosition]);
-
-  useEffect(() => {
-    if (!spotifyToken || !spotifyFloatingRef.current) return;
-    const updateHeight = () => {
-      if (!spotifyFloatingRef.current) return;
-      const nextHeight = Math.ceil(spotifyFloatingRef.current.getBoundingClientRect().height);
-      if (nextHeight > 0) setSpotifyPlaceholderHeight(nextHeight);
-    };
-    updateHeight();
-    const observer = new ResizeObserver(updateHeight);
-    observer.observe(spotifyFloatingRef.current);
-    return () => observer.disconnect();
-  }, [spotifyToken]);
-
-  const spotifySlotHeight = spotifyToken ? (spotifyPlaceholderHeight || 140) : 0;
+  const spotifyPortal = spotifyToken && spotifyMountRef.current
+    ? createPortal(
+        <SpotifyPlayer
+          className="w-full"
+          tone={isFocusMode ? 'dark' : 'light'}
+          onArtworkChange={setSpotifyArtworkUrl}
+          onMenuToggle={setIsMixesOpen}
+          preparePlayback={isFocusMode}
+        />,
+        spotifyMountRef.current
+      )
+    : null;
 
   const toggleFocusMode = async () => {
     if (!isFocusMode) {
@@ -320,31 +276,8 @@ const App: React.FC = () => {
           spotifyArtworkUrl={spotifyArtworkUrl}
           isMixesOpen={isMixesOpen}
           spotifySlotRef={setFocusSpotifySlot}
-          spotifySlotHeight={spotifySlotHeight}
         />
-        {spotifyToken && (
-          <div
-            ref={spotifyFloatingRef}
-            className="fixed transition-[transform,opacity,top,left,width] duration-500 ease-[cubic-bezier(0.2,0.9,0.2,1)]"
-            style={{
-              top: spotifyFloatingStyle.top,
-              left: spotifyFloatingStyle.left,
-              width: spotifyFloatingStyle.width,
-              opacity: spotifyFloatingStyle.opacity,
-              pointerEvents: spotifyFloatingStyle.pointerEvents,
-              transform: spotifyFloatingStyle.transform,
-              zIndex: isFocusMode ? 160 : 120
-            }}
-          >
-            <SpotifyPlayer
-              className="w-full"
-              tone={isFocusMode ? 'dark' : 'light'}
-              onArtworkChange={setSpotifyArtworkUrl}
-              onMenuToggle={setIsMixesOpen}
-              preparePlayback={isFocusMode}
-            />
-          </div>
-        )}
+        {spotifyPortal}
 
         <div className={`transition-opacity duration-500 ${isFocusMode ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             <div ref={headerRef} className={`z-[110] transition-all duration-700 ease-spring ${fullPageChatOpen ? 'fixed top-0 left-0 right-0' : 'relative'}`}>
@@ -389,11 +322,7 @@ const App: React.FC = () => {
                                         : 'mt-0 max-h-0 opacity-0 pointer-events-none'
                                 }`}
                             >
-                                <div
-                                    ref={setHomeSpotifySlot}
-                                    className="w-full"
-                                    style={{ height: isHomeSpotifyVisible ? spotifySlotHeight : 0 }}
-                                />
+                                <div ref={setHomeSpotifySlot} className="w-full" />
                             </div>
                             <div className={`w-full max-w-[1200px] ${isHomeSpotifyVisible ? 'mt-4' : 'mt-1'}`}>
                                 <Slides />

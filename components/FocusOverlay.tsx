@@ -17,7 +17,6 @@ interface FocusOverlayProps {
   spotifyArtworkUrl?: string | null;
   isMixesOpen?: boolean;
   spotifySlotRef?: React.Ref<HTMLDivElement>;
-  spotifySlotHeight?: number;
 }
 
 type TimerState = 'setup' | 'running' | 'paused' | 'completed';
@@ -92,8 +91,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
     onNewChat,
     spotifyArtworkUrl = null,
     isMixesOpen = false,
-    spotifySlotRef,
-    spotifySlotHeight = 0
+    spotifySlotRef
 }) => {
   // State
   const [state, setState] = useState<TimerState>('setup');
@@ -806,11 +804,7 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
 
                   <div className="w-full px-4 md:px-8 pointer-events-auto">
                       <div className="mx-auto w-full max-w-2xl">
-                          <div
-                              ref={spotifySlotRef}
-                              className="w-full"
-                              style={spotifySlotHeight ? { height: spotifySlotHeight } : undefined}
-                          />
+                          <div ref={spotifySlotRef} className="w-full" />
                       </div>
                   </div>
 

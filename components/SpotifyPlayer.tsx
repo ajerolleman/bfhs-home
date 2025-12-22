@@ -94,12 +94,14 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
             images?.[2]?.url ||
             null;
         updateArtwork(nextUrl);
-        const nextDeviceId = state?.currentDeviceId || state?.deviceId;
-        if (nextDeviceId) {
-            deviceIdRef.current = nextDeviceId;
+        const sdkDeviceId = state?.deviceId;
+        if (sdkDeviceId) {
+            sdkDeviceIdRef.current = sdkDeviceId;
         }
-        if (state?.deviceId) {
-            sdkDeviceIdRef.current = state.deviceId;
+        if (sdkDeviceIdRef.current) {
+            deviceIdRef.current = sdkDeviceIdRef.current;
+        } else if (state?.currentDeviceId) {
+            deviceIdRef.current = state.currentDeviceId;
         }
         if (typeof state?.isPlaying === 'boolean') {
             if (state.isPlaying) {
@@ -360,6 +362,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
         if (!token) return;
         loadStartRef.current = Date.now();
         const interval = window.setInterval(() => {
+            if (isPlaying) return;
             const now = Date.now();
             const last = lastPlaybackRef.current || loadStartRef.current;
             if (now - last < 12000) return;
@@ -370,7 +373,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
             fetchNowPlaying(0, true);
         }, 4000);
         return () => window.clearInterval(interval);
-    }, [token, fetchNowPlaying]);
+    }, [token, fetchNowPlaying, isPlaying]);
 
     useEffect(() => {
         if (!token) return;
@@ -607,8 +610,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
                                         token={token}
                                         uris={activeUris}
                                         persistDeviceSelection={true}
-                                        syncExternalDevice={true}
-                                        syncExternalDeviceInterval={5}
+                                        syncExternalDevice={false}
                                         callback={handlePlayback}
                                         layout="compact"
                                         name={PLAYER_NAME}
