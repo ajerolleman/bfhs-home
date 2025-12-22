@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from
 import { ChatSession, UserProfile } from '../types';
 import ChatPanel from './ChatPanel';
 import AIQuickBar from './AIQuickBar';
-import SpotifyPlayer from './SpotifyPlayer';
 import DayTicker from './DayTicker';
 
 interface FocusOverlayProps {
@@ -15,6 +14,10 @@ interface FocusOverlayProps {
   userProfile: UserProfile | null;
   onSignIn: () => void;
   onNewChat: () => void;
+  spotifyArtworkUrl?: string | null;
+  isMixesOpen?: boolean;
+  spotifySlotRef?: React.Ref<HTMLDivElement>;
+  spotifySlotHeight?: number;
 }
 
 type TimerState = 'setup' | 'running' | 'paused' | 'completed';
@@ -86,7 +89,11 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
     isSending,
     userProfile,
     onSignIn,
-    onNewChat
+    onNewChat,
+    spotifyArtworkUrl = null,
+    isMixesOpen = false,
+    spotifySlotRef,
+    spotifySlotHeight = 0
 }) => {
   // State
   const [state, setState] = useState<TimerState>('setup');
@@ -108,8 +115,6 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
   const [isParkingLotOpen, setIsParkingLotOpen] = useState(false);
   const [parkingInput, setParkingInput] = useState('');
   const [isAIExpanded, setIsAIExpanded] = useState(false);
-  const [isMixesOpen, setIsMixesOpen] = useState(false);
-  const [spotifyArtworkUrl, setSpotifyArtworkUrl] = useState<string | null>(null);
   const [aiDockHeight, setAiDockHeight] = useState(240);
   const hasConversation = (currentSession?.messages?.length ?? 0) > 0;
   
@@ -287,10 +292,6 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
       onSearch(query, image);
       setIsAIExpanded(true);
   };
-
-  const handleSpotifyArtworkChange = useCallback((url: string | null) => {
-      setSpotifyArtworkUrl(url);
-  }, []);
 
   useEffect(() => {
       if (!isActive) return;
@@ -805,7 +806,11 @@ const FocusOverlay: React.FC<FocusOverlayProps> = ({
 
                   <div className="w-full px-4 md:px-8 pointer-events-auto">
                       <div className="mx-auto w-full max-w-2xl">
-                          <SpotifyPlayer className="w-full" onArtworkChange={handleSpotifyArtworkChange} onMenuToggle={setIsMixesOpen} />
+                          <div
+                              ref={spotifySlotRef}
+                              className="w-full"
+                              style={spotifySlotHeight ? { height: spotifySlotHeight } : undefined}
+                          />
                       </div>
                   </div>
 

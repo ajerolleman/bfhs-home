@@ -41,6 +41,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
     const retryCountRef = useRef(0);
     const loadStartRef = useRef(0);
     const playRequestRef = useRef(0);
+    const lastTransferRef = useRef(0);
 
     useEffect(() => {
         if (uris && uris.length > 0) {
@@ -202,33 +203,40 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
                 return null;
             }
         };
-        const getPlaybackIsPlaying = async () => {
+        const getPlaybackState = async () => {
             try {
                 const res = await fetch('https://api.spotify.com/v1/me/player', {
                     headers: { Authorization: `Bearer ${token}` }
                 });
-                if (!res.ok) return false;
+                if (res.status === 204) {
+                    return { isPlaying: false, deviceId: null as string | null };
+                }
+                if (!res.ok) return { isPlaying: false, deviceId: null as string | null };
                 const data = await res.json();
-                return Boolean(data?.is_playing);
+                return {
+                    isPlaying: Boolean(data?.is_playing),
+                    deviceId: data?.device?.id || null
+                };
             } catch (e) {
-                return false;
+                return { isPlaying: false, deviceId: null as string | null };
             }
         };
         const syncIfReady = async () => {
             if (cancelled) return false;
-            const shouldPlay = await getPlaybackIsPlaying();
-            if (sdkDeviceIdRef.current) {
-                transferPlayback(shouldPlay);
+            const playback = await getPlaybackState();
+            const targetDeviceId = sdkDeviceIdRef.current || (await resolveWebPlayerId());
+            if (!targetDeviceId) return false;
+            if (playback.deviceId === targetDeviceId) {
+                deviceIdRef.current = targetDeviceId;
                 fetchNowPlaying(0, true);
                 return true;
             }
-            const deviceId = await resolveWebPlayerId();
-            if (deviceId) {
-                transferPlayback(shouldPlay, deviceId);
-                fetchNowPlaying(0, true);
-                return true;
-            }
-            return false;
+            const now = Date.now();
+            if (now - lastTransferRef.current < 1000) return false;
+            lastTransferRef.current = now;
+            transferPlayback(playback.isPlaying, targetDeviceId);
+            fetchNowPlaying(0, true);
+            return true;
         };
         syncIfReady();
         let attempts = 0;
