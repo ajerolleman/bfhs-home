@@ -8,7 +8,9 @@ interface SpotifyPlayerProps {
     onArtworkChange?: (url: string | null) => void;
     onMenuToggle?: (open: boolean) => void;
     tone?: 'light' | 'dark';
+    preparePlayback?: boolean;
 }
+const PLAYER_NAME = 'BFHS Focus Player';
 const PLAYLISTS = [
     { id: 'deep-focus', label: 'Deep Focus', uris: ['spotify:playlist:37i9dQZF1DWZeKCadgRdKQ'] },
     { id: 'lofi', label: 'Lo-Fi Beats', uris: ['spotify:playlist:37i9dQZF1DWWQRwui0ExPn'] },
@@ -16,7 +18,7 @@ const PLAYLISTS = [
     { id: 'jazz', label: 'Jazz Vibes', uris: ['spotify:playlist:37i9dQZF1DX4wta20PHgwo'] }
 ];
 
-const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtworkChange, onMenuToggle, tone = 'dark' }) => {
+const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtworkChange, onMenuToggle, tone = 'dark', preparePlayback = false }) => {
     const isLightTone = tone === 'light';
     const [token, setToken] = useState<string | null>(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -32,6 +34,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
     const containerRef = useRef<HTMLDivElement>(null);
     const artworkRef = useRef<string | null>(null);
     const deviceIdRef = useRef<string | null>(null);
+    const sdkDeviceIdRef = useRef<string | null>(null);
     const fetchAbortRef = useRef<AbortController | null>(null);
     const lastFetchRef = useRef(0);
     const lastPlaybackRef = useRef(0);
@@ -94,6 +97,9 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
         if (nextDeviceId) {
             deviceIdRef.current = nextDeviceId;
         }
+        if (state?.deviceId) {
+            sdkDeviceIdRef.current = state.deviceId;
+        }
         if (typeof state?.isPlaying === 'boolean') {
             if (state.isPlaying) {
                 setIsPlaying(true);
@@ -155,6 +161,79 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
         }
     }, [token, updateArtwork]);
 
+    const transferPlayback = useCallback(async (shouldPlay: boolean, overrideDeviceId?: string | null) => {
+        if (!token) return;
+        const sdkDeviceId = overrideDeviceId || sdkDeviceIdRef.current;
+        if (!sdkDeviceId) return;
+        try {
+            await fetch('https://api.spotify.com/v1/me/player', {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ device_ids: [sdkDeviceId], play: shouldPlay })
+            });
+            deviceIdRef.current = sdkDeviceId;
+        } catch (e) {
+            // Ignore transfer errors.
+        }
+    }, [token]);
+
+    useEffect(() => {
+        if (!token || !preparePlayback) return;
+        setIsPlaying(false);
+        let cancelled = false;
+        const resolveWebPlayerId = async () => {
+            try {
+                const res = await fetch('https://api.spotify.com/v1/me/player/devices', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (!res.ok) return null;
+                const data = await res.json();
+                const devices = Array.isArray(data?.devices) ? data.devices : [];
+                const byName = devices.find((device: any) =>
+                    String(device?.name || '').toLowerCase().includes(PLAYER_NAME.toLowerCase())
+                );
+                const webPlayer = byName || devices.find((device: any) =>
+                    String(device?.name || '').toLowerCase().includes('spotify web player')
+                );
+                return webPlayer?.id || null;
+            } catch (e) {
+                return null;
+            }
+        };
+        const syncIfReady = async () => {
+            if (cancelled) return false;
+            if (sdkDeviceIdRef.current) {
+                transferPlayback(false);
+                fetchNowPlaying(0, true);
+                return true;
+            }
+            const deviceId = await resolveWebPlayerId();
+            if (deviceId) {
+                transferPlayback(false, deviceId);
+                fetchNowPlaying(0, true);
+                return true;
+            }
+            return false;
+        };
+        syncIfReady();
+        let attempts = 0;
+        const interval = window.setInterval(async () => {
+            attempts += 1;
+            if (await syncIfReady()) {
+                window.clearInterval(interval);
+            } else if (attempts >= 12) {
+                window.clearInterval(interval);
+            }
+        }, 400);
+        return () => {
+            cancelled = true;
+            window.clearInterval(interval);
+        };
+    }, [token, preparePlayback, transferPlayback, fetchNowPlaying]);
+
     const startPlayback = useCallback(async (nextUris?: string[], retried = false) => {
         if (!token) return;
         let body: Record<string, unknown> | undefined;
@@ -163,7 +242,11 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
             body = isContextUri ? { context_uri: nextUris[0] } : { uris: nextUris };
         }
         try {
-            const deviceId = deviceIdRef.current;
+            let deviceId = deviceIdRef.current || sdkDeviceIdRef.current || null;
+            if (!deviceId && !retried) {
+                await transferPlayback(true);
+                deviceId = deviceIdRef.current || sdkDeviceIdRef.current || null;
+            }
             const endpoint = deviceId
                 ? `https://api.spotify.com/v1/me/player/play?device_id=${encodeURIComponent(deviceId)}`
                 : 'https://api.spotify.com/v1/me/player/play';
@@ -176,6 +259,9 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
                 body: body ? JSON.stringify(body) : undefined
             });
             if (!res.ok && !retried) {
+                if (res.status === 404) {
+                    await transferPlayback(true);
+                }
                 window.setTimeout(() => startPlayback(nextUris, true), 600);
             }
         } catch (e) {
@@ -184,12 +270,16 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
             }
         }
         fetchNowPlaying(200, true);
-    }, [token, fetchNowPlaying]);
+    }, [token, fetchNowPlaying, transferPlayback]);
 
     const pausePlayback = useCallback(async (retried = false) => {
         if (!token) return;
         try {
-            const deviceId = deviceIdRef.current;
+            let deviceId = deviceIdRef.current || sdkDeviceIdRef.current || null;
+            if (!deviceId && !retried) {
+                await transferPlayback(false);
+                deviceId = deviceIdRef.current || sdkDeviceIdRef.current || null;
+            }
             const endpoint = deviceId
                 ? `https://api.spotify.com/v1/me/player/pause?device_id=${encodeURIComponent(deviceId)}`
                 : 'https://api.spotify.com/v1/me/player/pause';
@@ -198,6 +288,9 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (!res.ok && !retried) {
+                if (res.status === 404) {
+                    await transferPlayback(false);
+                }
                 window.setTimeout(() => pausePlayback(true), 600);
             }
         } catch (e) {
@@ -206,7 +299,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
             }
         }
         fetchNowPlaying(160, true);
-    }, [token, fetchNowPlaying]);
+    }, [token, fetchNowPlaying, transferPlayback]);
 
     const handleMixSelect = useCallback((nextId: string | null, label: string, nextUris?: string[]) => {
         setSelectedPlaylistId(nextId);
@@ -498,6 +591,8 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
                                         syncExternalDeviceInterval={5}
                                         callback={handlePlayback}
                                         layout="compact"
+                                        name={PLAYER_NAME}
+                                        preloadData={true}
                                         hideCoverArt={true}
                                         hideAttribution={true}
                                         inlineVolume={false}
