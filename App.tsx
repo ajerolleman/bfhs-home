@@ -14,6 +14,7 @@ import ProfileModal from './components/ProfileModal';
 import ChatOverlay from './components/ChatOverlay';
 import ChatPanel from './components/ChatPanel';
 import FocusOverlay from './components/FocusOverlay';
+import ActivityOverlay from './components/ActivityOverlay';
 import { subscribeToAuth, getUserProfile, getRecentMemoryNotes, logout } from './services/firebase';
 import { sendMessageToGemini } from './services/geminiService';
 import { createNewSession, saveSession } from './services/chatHistoryService';
@@ -71,6 +72,8 @@ const App: React.FC = () => {
   const [homeSpotifySlot, setHomeSpotifySlot] = useState<HTMLDivElement | null>(null);
   const [focusSpotifySlot, setFocusSpotifySlot] = useState<HTMLDivElement | null>(null);
   const [isDashboardBarExpanded, setIsDashboardBarExpanded] = useState(false);
+  const [isActivityOpen, setIsActivityOpen] = useState(false);
+  const [activitySpotifySlot, setActivitySpotifySlot] = useState<HTMLDivElement | null>(null);
   const overflowXRef = useRef<{ body: string; html: string } | null>(null);
   const spotifyMountRef = useRef<HTMLDivElement | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -167,12 +170,12 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!spotifyToken || !spotifyMountRef.current) return;
-    const target = isFocusMode ? focusSpotifySlot : homeSpotifySlot;
+    const target = isFocusMode ? focusSpotifySlot : isActivityOpen ? activitySpotifySlot : homeSpotifySlot;
     if (!target) return;
     if (!target.contains(spotifyMountRef.current)) {
       target.appendChild(spotifyMountRef.current);
     }
-  }, [spotifyToken, isFocusMode, homeSpotifySlot, focusSpotifySlot]);
+  }, [spotifyToken, isFocusMode, isActivityOpen, homeSpotifySlot, focusSpotifySlot, activitySpotifySlot]);
 
   const spotifyPortal = spotifyToken && spotifyMountRef.current
     ? createPortal(
@@ -197,6 +200,11 @@ const App: React.FC = () => {
       if (document.fullscreenElement) await document.exitFullscreen();
       setIsFocusMode(false);
     }
+  };
+
+  const handleOpenActivity = () => {
+    if (isFocusMode) return;
+    setIsActivityOpen(true);
   };
 
   useEffect(() => {
@@ -319,7 +327,7 @@ const App: React.FC = () => {
                   style={{ paddingTop: '50px' }}
                   className={`header-safe bg-gradient-to-b from-[#1B3B2F] to-[#163127] transition-all duration-500 relative flex flex-col items-center gap-4 ${fullPageChatOpen ? 'pb-6' : 'pb-4'}`}
                 >
-                  <Header onOpenChat={() => { if (!currentSession) setCurrentSession(createNewSession()); setFullPageChatOpen(true); }} onOpenProfile={() => setIsProfileModalOpen(true)} userProfile={userProfile} currentUser={currentUser} compact={fullPageChatOpen} isFocusMode={isFocusMode} onToggleFocus={toggleFocusMode} />
+                  <Header onOpenChat={() => { if (!currentSession) setCurrentSession(createNewSession()); setFullPageChatOpen(true); }} onOpenProfile={() => setIsProfileModalOpen(true)} userProfile={userProfile} currentUser={currentUser} compact={fullPageChatOpen} isFocusMode={isFocusMode} onToggleFocus={toggleFocusMode} onOpenActivity={handleOpenActivity} />
                   <div className={`container mx-auto max-w-[1200px] relative z-10 flex justify-center transition-all duration-700 ease-spring ${fullPageChatOpen ? 'py-0' : 'py-2'}`}>
                       <QuickLinks compact={fullPageChatOpen} />
                   </div>
@@ -400,6 +408,13 @@ const App: React.FC = () => {
             >
                 <ChatPanel messages={currentSession?.messages || []} isLoading={isSending} userProfile={userProfile} onSignInRequest={() => setIsProfileModalOpen(true)} hideInitialVerifiedSource={true} />
             </ChatOverlay>
+
+            <ActivityOverlay
+              isOpen={isActivityOpen}
+              onClose={() => setIsActivityOpen(false)}
+              userProfile={userProfile}
+              spotifySlotRef={setActivitySpotifySlot}
+            />
 
             <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} user={currentUser} profile={userProfile} onProfileUpdate={setUserProfile} authMessage={authError} />
         </div>

@@ -5,6 +5,7 @@ import { UserProfile } from '../types';
 
 interface DayTickerProps {
   userProfile?: UserProfile | null;
+  onOpenActivity?: () => void;
 }
 
 function toTodayDate(timeHHMM: string) {
@@ -75,7 +76,7 @@ function getDayType(date: Date): "A" | "B" | "Weekend" {
     return "A"; // Default fallback
 }
 
-const DayTicker: React.FC<DayTickerProps> = ({ userProfile }) => {
+const DayTicker: React.FC<DayTickerProps> = ({ userProfile, onOpenActivity }) => {
   const [text, setText] = useState("");
   const [dayLabel, setDayLabel] = useState("A Day");
   const [progress, setProgress] = useState(0);
@@ -147,7 +148,19 @@ const DayTicker: React.FC<DayTickerProps> = ({ userProfile }) => {
   }, [userProfile, dayType]);
 
   return (
-    <div className="flex items-center space-x-3 bg-black/20 px-3 py-1.5 rounded-lg border border-white/5 shadow-inner backdrop-blur-sm">
+    <div
+        className={`flex items-center space-x-3 bg-black/20 px-3 py-1.5 rounded-lg border border-white/5 shadow-inner backdrop-blur-sm ${onOpenActivity ? 'cursor-pointer hover:border-white/20 hover:bg-black/30' : ''}`}
+        onClick={onOpenActivity}
+        onKeyDown={(event) => {
+            if (!onOpenActivity) return;
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onOpenActivity();
+            }
+        }}
+        role={onOpenActivity ? 'button' : undefined}
+        tabIndex={onOpenActivity ? 0 : undefined}
+    >
          <div className="flex items-center space-x-2 shrink-0">
             <span className="text-[10px] text-falcon-gold font-bold uppercase tracking-wider">{dayLabel}</span>
             <span className="text-[10px] text-white/20">|</span>

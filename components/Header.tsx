@@ -11,6 +11,7 @@ interface HeaderProps {
   compact?: boolean;
   isFocusMode?: boolean;
   onToggleFocus?: () => void;
+  onOpenActivity?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -20,7 +21,8 @@ const Header: React.FC<HeaderProps> = ({
     currentUser, 
     compact,
     isFocusMode,
-    onToggleFocus
+    onToggleFocus,
+    onOpenActivity
 }) => {
   return (
     <header className={`w-full bg-gradient-to-b from-[#1B3B2F] to-[#163127] text-white relative shadow-md z-10 transition-all duration-700 ease-[cubic-bezier(0.25,0.8,0.25,1)] ${compact ? 'pb-1 pt-1' : 'pb-2 pt-2'}`}>
@@ -47,11 +49,11 @@ const Header: React.FC<HeaderProps> = ({
                 </div>
             )}
             <div className={`${compact ? 'block' : 'hidden sm:block'}`}>
-               <DayTicker userProfile={userProfile} />
+               <DayTicker userProfile={userProfile} onOpenActivity={onOpenActivity} />
             </div>
             {!compact && (
                 <div className="sm:hidden">
-                    <DayTicker userProfile={userProfile} />
+                    <DayTicker userProfile={userProfile} onOpenActivity={onOpenActivity} />
                 </div>
             )}
         </div>
