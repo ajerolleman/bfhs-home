@@ -18,7 +18,6 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
     const [query, setQuery] = useState('');
     const [isFocused, setIsFocused] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [isMultiline, setIsMultiline] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [fileName, setFileName] = useState<string | null>(null);
     const [imageContent, setImageContent] = useState<string | null>(null);
@@ -112,13 +111,17 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
             // Calculate new height (max 200px)
             const MAX_HEIGHT = 200;
             const scrollHeight = textarea.scrollHeight;
-            const lineHeight = parseFloat(window.getComputedStyle(textarea).lineHeight || '28');
-            const isMulti = scrollHeight > lineHeight + 4;
-            const newHeight = isMulti ? Math.min(scrollHeight, MAX_HEIGHT) : lineHeight;
+            const styles = window.getComputedStyle(textarea);
+            const lineHeight = parseFloat(styles.lineHeight || '28');
+            const fontSize = parseFloat(styles.fontSize || '20');
+            const verticalPad = Math.max(4, Math.round((lineHeight - fontSize) / 2));
+            const minHeight = lineHeight + verticalPad * 2;
+            const newHeight = Math.max(minHeight, Math.min(scrollHeight, MAX_HEIGHT));
             
             textarea.style.height = `${newHeight}px`;
             textarea.style.overflowY = scrollHeight > MAX_HEIGHT ? 'auto' : 'hidden';
-            setIsMultiline(isMulti);
+            textarea.style.paddingTop = `${verticalPad}px`;
+            textarea.style.paddingBottom = `${verticalPad}px`;
         };
 
         handleResize();
@@ -155,12 +158,12 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
         setFileName(null);
         setImageContent(null);
         setIsFocused(false);
-        setIsMultiline(false);
         textareaRef.current?.blur();
         if (textareaRef.current) textareaRef.current.style.height = 'auto';
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && e.shiftKey) return;
         if (!hasQuery && !fileName && !imageContent) return;
 
         if (e.key === 'ArrowDown') {
@@ -292,7 +295,7 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
                     )}
 
                     {/* Main Input Row - increased py-4 and gap-4 for a more spacious feel */}
-                    <div className={`flex gap-4 px-5 py-4 ${isMultiline ? 'items-end' : 'items-center'} min-h-[64px] transition-all duration-200`}>
+                    <div className="flex gap-4 px-5 py-4 items-center min-h-[64px] transition-all duration-200">
                         
                         {/* 1. Plus Button */}
                         <div className="relative z-10 flex items-center justify-center h-10 w-10 shrink-0"> 
@@ -327,7 +330,7 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
                         </div>
                         
                         {/* 2. Falcon Emoji */}
-                        <div className="relative z-10 shrink-0 hidden md:block">
+                        <div className="relative z-10 shrink-0 hidden md:block flex items-center h-10">
                             <span className="text-2xl leading-none">🦅</span>
                         </div>
 
@@ -344,9 +347,9 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
                             onPaste={handlePaste}
                             placeholder={inputPlaceholder}
                             className={`
-                                relative z-10 flex-1 bg-transparent border-none outline-none 
+                                relative z-10 flex-1 bg-transparent border-none outline-none self-center
                                 text-[#E3E3E3] placeholder-white/50 font-normal min-w-0 
-                                resize-none overflow-hidden 
+                                resize-none overflow-hidden box-border 
                                 p-0 m-0 py-0
                                 leading-[28px]
                                 ${imageContent ? 'text-falcon-gold font-medium' : ''} 
