@@ -1,33 +1,23 @@
-# Stage 1: Build the React App
-# Using Node 22 because React 19 requires a newer version
-FROM node:22-alpine as build
+# Use Node 20 (Standard and stable)
+FROM node:20-alpine
 
 # Set the working directory
 WORKDIR /app
 
-# Copy package files first to cache dependencies
+# Copy package files first (better caching)
 COPY package*.json ./
 
 # Install dependencies
 RUN npm install
 
-# Copy the rest of your code
+# Copy the rest of your app code
 COPY . .
 
-# Build the website
+# Build the app (Creates the 'dist' folder)
 RUN npm run build
 
-# Stage 2: Serve with Nginx
-FROM nginx:alpine
+# Install a simple web server
+RUN npm install -g serve
 
-# Copy the built files from the previous stage
-COPY --from=build /app/dist /usr/share/nginx/html
-
-# Fix for React Router (redirects 404s to index.html so refreshing works)
-RUN echo 'server { listen 80; location / { root /usr/share/nginx/html; index index.html index.htm; try_files $uri $uri/ /index.html; } }' > /etc/nginx/conf.d/default.conf
-
-# Open port 80
-EXPOSE 80
-
-# Start Nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Tell the server to listen on Port 8080 (Crucial for Cloud Run)
+CMD ["serve", "-s", "dist", "-l", "8080"]
