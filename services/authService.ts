@@ -40,7 +40,7 @@ const generateCodeChallenge = async (verifier: string) => {
 };
 
 export const getSpotifyRedirectUri = () => {
-    return 'https://bfhs-home.onrender.com/callback';
+    return `${window.location.origin}/callback`;
 };
 
 export const getSpotifyLoginUrl = async () => {

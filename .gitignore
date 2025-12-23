@@ -26,3 +26,7 @@ dist-ssr
 
 
 google-cloud-sdk/
+node_modules_hidden/
+node_modules/
+google-cloud-sdk/
+.env

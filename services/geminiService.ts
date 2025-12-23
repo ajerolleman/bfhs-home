@@ -3,7 +3,12 @@ import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
 import { BFHS_SYSTEM_PROMPT } from '../constants';
 import { UserProfile, MemoryNote } from '../types';
 
-const apiKey = process.env.API_KEY;
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
+// Safety check (optional but good)
+if (!API_KEY) {
+  console.error("Missing API Key! check your .env file");
+}
 let ai: GoogleGenAI | null = null;
 let chatSession: Chat | null = null;
 let currentUserId: string | null = null;
@@ -59,10 +64,10 @@ const FAQ_SHORT_CIRCUITS: Record<string, string> = {
 };
 
 export const initializeGenAI = () => {
-  if (apiKey) {
-    ai = new GoogleGenAI({ apiKey });
+  if (API_KEY) {
+    ai = new GoogleGenAI({ apiKey: API_KEY });
   } else {
-    console.error("API_KEY is missing");
+    console.error("VITE_GEMINI_API_KEY is missing");
   }
 };
 
@@ -185,6 +190,19 @@ export const sendMessageToGemini = async (
     let contextString = "";
     if (userContext?.profile && userContext.profile.allowMemory) {
         contextString += `\n\n[USER CONTEXT]\nName: ${userContext.profile.name}\nGrade: ${userContext.profile.grade}\n`;
+        if (userContext.profile.schedule) {
+            const schedule = userContext.profile.schedule;
+            const formatDay = (day: 'A' | 'B') => {
+                const entries = schedule[day]
+                    .map((name, index) => name.trim() ? `${day}${index + 1} ${name.trim()}` : "")
+                    .filter(entry => entry.length > 0);
+                return entries.length > 0 ? entries.join(", ") : "";
+            };
+            const scheduleText = [formatDay('A'), formatDay('B')].filter(entry => entry.length > 0).join("; ");
+            if (scheduleText) {
+                contextString += `Classes: ${scheduleText}\n`;
+            }
+        }
         if (userContext.notes.length > 0) {
             contextString += "Memory Notes:\n";
             userContext.notes.forEach(n => {
@@ -225,26 +243,6 @@ export const sendMessageToGemini = async (
         console.log("Output Tokens:", result.usageMetadata.candidatesTokenCount);
         console.log("Total Tokens:", result.usageMetadata.totalTokenCount);
         console.groupEnd();
-    }
-
-    // Append grounding sources if available (Google Search results)
-    const groundingChunks = result.candidates?.[0]?.groundingMetadata?.groundingChunks;
-    if (groundingChunks) {
-      const uniqueSources = new Map();
-      groundingChunks.forEach((chunk: any) => {
-        if (chunk.web?.uri && chunk.web?.title) {
-          uniqueSources.set(chunk.web.uri, chunk.web.title);
-        }
-      });
-
-      if (uniqueSources.size > 0) {
-        textResponse += "\n\n---\n**Sources found via Google Search:**\n";
-        let index = 1;
-        uniqueSources.forEach((title, uri) => {
-            textResponse += `${index}. [${title}](${uri})\n`;
-            index++;
-        });
-      }
     }
 
     // 4. Save to Cache
