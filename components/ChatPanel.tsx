@@ -157,9 +157,11 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
 
                         {/* Meta Info (Timestamp / Badge) */}
                         <div className={`flex items-center gap-2 mt-1.5 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} px-1`}>
-                            <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
-                                {msg.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                            </span>
+                            {!msg.id.toString().startsWith('welcome') && (
+                                <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
+                                    {msg.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                </span>
+                            )}
                             
                             {/* Verified Source Badge for Model */}
                             {msg.role === 'model' && !msg.isError && msg.id !== firstVerifiedId && (

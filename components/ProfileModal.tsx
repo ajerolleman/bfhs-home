@@ -102,10 +102,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, prof
         
         {/* Header */}
         <div className="bg-falcon-green px-6 py-4 flex justify-between items-center">
-            <h2 className="text-white font-bold text-lg flex items-center gap-2">
-                <span className="text-2xl">🦅</span> 
-                {user ? "BFHS Help Settings" : "BFHS Student Login"}
-            </h2>
+          <h2 className="text-xl font-header font-bold uppercase tracking-widest text-white">
+            {user ? "BFHS Settings" : "BFHS Student Login"}
+          </h2>
             {user && (
                 <button onClick={onClose} className="text-white/70 hover:text-white">✕</button>
             )}

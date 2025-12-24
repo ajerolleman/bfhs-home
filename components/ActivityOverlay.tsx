@@ -26,7 +26,12 @@ function getCurrentBlock(now = new Date()) {
     const firstStart = toTodayDate(BLOCK_SCHEDULE[0].start);
     const lastEnd = toTodayDate(BLOCK_SCHEDULE[BLOCK_SCHEDULE.length - 1].end);
 
-    if (now < firstStart) return { name: 'Before school', start: now, end: firstStart, type: 'idle' as const };
+    if (now < firstStart) {
+        if (now.getHours() < 5) {
+            return { name: 'School is out!', start: now, end: firstStart, type: 'idle' as const };
+        }
+        return { name: 'Before school', start: now, end: firstStart, type: 'idle' as const };
+    }
     if (now >= lastEnd) return { name: 'School is out!', start: lastEnd, end: lastEnd, type: 'idle' as const };
 
     return { name: 'Schedule', start: now, end: null, type: 'idle' as const };

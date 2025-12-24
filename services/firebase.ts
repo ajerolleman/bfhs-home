@@ -162,4 +162,19 @@ export const deleteMemoryNote = async (uid: string, noteId: string) => {
   }
 };
 
+export const getLeaderboard = async (limitCount: number = 10): Promise<UserProfile[]> => {
+  try {
+    const usersRef = collection(db, "users");
+    const q = query(usersRef, orderBy("gamification.xp", "desc"), limit(limitCount));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      uid: doc.id,
+      ...doc.data()
+    } as UserProfile));
+  } catch (e) {
+    console.warn("Error fetching leaderboard:", e);
+    return [];
+  }
+};
+
 export { auth, db };

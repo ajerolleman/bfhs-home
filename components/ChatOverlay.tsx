@@ -44,7 +44,7 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
 
     return (
         <div 
-            style={{ top: topOffset, height: `calc(100vh - ${topOffset}px)` }}
+            style={{ top: 0, height: '100vh' }}
             className={`fixed left-0 right-0 z-[100] flex flex-col ${
                 isOpen 
                 ? 'pointer-events-auto' 
@@ -54,35 +54,42 @@ const ChatOverlay: React.FC<ChatOverlayProps> = ({
             {/* 1. Background Layer (Fades Independent of Content) */}
             <div className={`absolute inset-0 bg-[#F3F4F6] dark:bg-gray-900 transition-opacity duration-1000 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${isOpen ? 'opacity-100' : 'opacity-0'}`} />
 
+            {/* Floating Back Button - Static in top-left */}
+            <div className={`absolute top-4 left-4 z-[120] transition-all duration-700 delay-300 ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'}`}>
+                <button 
+                    onClick={onClose}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-2xl hover:shadow-falcon-green/10 rounded-2xl transition-all group active:scale-95"
+                    title="Back to Dashboard"
+                >
+                    <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center group-hover:bg-falcon-green/10 transition-colors">
+                        <svg className="w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:text-falcon-green transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
+                    </div>
+                    <span className="text-xs font-black text-gray-600 dark:text-gray-300 group-hover:text-falcon-green uppercase tracking-[0.15em]">Dashboard</span>
+                </button>
+            </div>
+
             {/* 2. Top Bar (Toolbar) */}
-            {/* Added opacity transition to ensure it disappears completely when not active */}
-            <div className={`shrink-0 h-14 bg-[#1B3B2F] text-white shadow-sm z-30 flex items-center justify-between px-4 md:px-6 relative transition-all duration-700 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${isOpen ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'}`}>
+            <div className={`shrink-0 py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-white/5 text-gray-600 dark:text-gray-300 shadow-sm z-[100] flex items-center justify-between px-4 md:px-6 relative transition-all duration-700 ease-[cubic-bezier(0.2,0.9,0.2,1)] ${isOpen ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'}`}>
                 <div className="flex items-center gap-3 flex-1">
-                    <button 
-                        onClick={onClose}
-                        className="p-2 hover:bg-white/10 rounded-full transition-colors flex items-center gap-2 group"
-                        title="Back to Dashboard"
-                    >
-                        <svg className="w-5 h-5 text-white/80 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                        <span className="text-sm font-bold text-white/90 group-hover:text-white">Back to Dashboard</span>
-                    </button>
+                    {/* Placeholder for spacing since button is now floating */}
+                    <div className="w-[120px] md:w-[140px]" />
                 </div>
 
                 <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-                    <h2 className="font-header text-lg tracking-wide">BFHS Chat</h2>
+                    <h2 className="font-header text-lg tracking-wide text-gray-800 dark:text-white opacity-0 md:opacity-100 transition-opacity">BFHS Chat</h2>
                 </div>
                 
                 <div className="flex-1 flex justify-end gap-2">
                     <button 
                         onClick={onClose}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-full text-xs font-bold uppercase tracking-wider transition-colors"
+                        className="flex items-center gap-1 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full text-xs font-bold uppercase tracking-wider transition-colors"
                         title="Exit (Esc)"
                     >
                         <span>Esc</span>
                     </button>
                     <button 
                         onClick={() => setShowHistory(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-full text-xs font-bold uppercase tracking-wider transition-colors"
+                        className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full text-xs font-bold uppercase tracking-wider transition-colors"
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         <span className="hidden sm:inline">History</span>

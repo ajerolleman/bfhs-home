@@ -330,7 +330,7 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
                         </div>
                         
                         {/* 2. Falcon Emoji */}
-                        <div className="relative z-10 shrink-0 hidden md:block flex items-center h-10">
+                        <div className="relative z-10 shrink-0 hidden md:flex items-center justify-center h-10 self-center">
                             <span className="text-2xl leading-none">🦅</span>
                         </div>
 
@@ -440,6 +440,8 @@ const AIQuickBar: React.FC<AIQuickBarProps> = ({ onSearch, onExpandChange, onOpe
                     </div>
                 )}
             </div>
+
+
 
             {/* Helper Chips - Only show when NOT docked */}
             {!docked && !hideChips && (

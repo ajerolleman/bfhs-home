@@ -25,7 +25,7 @@ const News: React.FC = () => {
             {/* Action */}
             <button 
                 onClick={() => setIsModalOpen(true)}
-                className="magnetic-btn shrink-0 inline-flex items-center space-x-2 bg-falcon-green dark:bg-falcon-gold dark:text-black text-white px-5 py-2.5 rounded-lg font-medium hover:bg-falcon-dark dark:hover:bg-yellow-400 transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-falcon-green/20 dark:hover:shadow-falcon-gold/20"
+                className="magnetic-btn shrink-0 inline-flex items-center space-x-2 backdrop-blur-md bg-white/40 dark:bg-white/10 border border-white/40 dark:border-white/20 text-falcon-green dark:text-white px-6 py-2.5 rounded-full font-medium hover:bg-white/50 dark:hover:bg-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
             >
                 <span>View Bulletin</span>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>

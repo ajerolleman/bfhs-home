@@ -24,7 +24,7 @@ const CustomCursor: React.FC = () => {
             const isSlight = btn.classList.contains('magnetic-slight');
             
             // Very slight strength
-            const strength = isSlight ? 0.05 : 0.1; 
+            const strength = isSlight ? 0.02 : 0.04; 
 
             const moveX = distanceX * strength;
             const moveY = distanceY * strength;

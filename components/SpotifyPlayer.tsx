@@ -570,7 +570,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ uris, className, onArtwor
                                 <div className="flex-1 min-w-0">
                                     <SpotifyWebPlayback
                                         key={`spotify-player-${playerKey}`}
-                                        token={token}
+                                        token={token!}
                                         uris={activeUris}
                                         persistDeviceSelection={true}
                                         syncExternalDevice={false}

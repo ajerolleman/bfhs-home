@@ -74,7 +74,27 @@ const App: React.FC = () => {
   const [isDashboardBarExpanded, setIsDashboardBarExpanded] = useState(false);
   const [isActivityOpen, setIsActivityOpen] = useState(false);
   const [activitySpotifySlot, setActivitySpotifySlot] = useState<HTMLDivElement | null>(null);
+  
+  // Christmas Mode - Default to TRUE, then check localStorage
+  const [isChristmasMode, setIsChristmasMode] = useState(() => {
+    const saved = localStorage.getItem('bfhs_christmas_mode');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  // Persist Christmas mode whenever it changes
+  useEffect(() => {
+    localStorage.setItem('bfhs_christmas_mode', isChristmasMode.toString());
+  }, [isChristmasMode]);
+
   const overflowXRef = useRef<{ body: string; html: string } | null>(null);
+
+  useEffect(() => {
+    if (isChristmasMode && !fullPageChatOpen) {
+      document.body.classList.add('christmas-mode');
+    } else {
+      document.body.classList.remove('christmas-mode');
+    }
+  }, [isChristmasMode, fullPageChatOpen]);
   const spotifyMountRef = useRef<HTMLDivElement | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
@@ -202,6 +222,30 @@ const App: React.FC = () => {
     }
   };
 
+  const handleOpenFullScreen = () => {
+    if (!currentSession || currentSession.messages.length === 0) {
+      // Create a fresh session with a perfect context-aware greeting
+      const welcomeMsg: ChatMessage = {
+        id: 'welcome-' + Date.now(),
+        role: 'model',
+        text: "Welcome to **BFHS Help**! 🦅\n\nI'm your dedicated student portal assistant, ready to help you navigate school life at Ben Franklin. \n\nWhether you need to clarify a **policy** in the handbook, check the **bell schedule**, or need some deep **tutoring** for your classes, I'm here to support you. \n\n_What's on your mind today?_",
+        timestamp: new Date()
+      };
+      
+      const newSession: ChatSession = {
+        id: Date.now().toString(),
+        title: 'New Chat',
+        messages: [welcomeMsg],
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+      
+      setCurrentSession(newSession);
+      saveSession(newSession);
+    }
+    setFullPageChatOpen(true);
+  };
+
   const handleOpenActivity = () => {
     if (isFocusMode) return;
     setIsActivityOpen(true);
@@ -302,7 +346,14 @@ const App: React.FC = () => {
     <div>
       <CustomCursor />
       <Spotlight />
-      <div className="min-h-screen bg-[#F3F4F6] pb-20 relative font-sans transition-colors duration-500 overflow-x-hidden">
+      <div 
+        className="min-h-screen bg-[#F3F4F6] pb-20 relative font-sans transition-colors duration-500 overflow-x-hidden"
+        style={(isChristmasMode && !fullPageChatOpen) ? {
+            backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.2)), url("https://t3.ftcdn.net/jpg/03/05/14/48/360_F_305144878_OMA5iXpxmDowvZZLz1TOjt78lMa41GqF.jpg")',
+            backgroundRepeat: 'no-repeat, repeat',
+            backgroundSize: 'cover, 400px auto'
+        } : {}}
+      >
         <div className="bg-noise fixed inset-0 z-[1]" />
         <div className="fixed top-0 left-0 w-[500px] h-[500px] bg-falcon-green/10 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[0]" />
         
@@ -324,17 +375,27 @@ const App: React.FC = () => {
         <div className={`transition-opacity duration-500 ${isFocusMode ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             <div ref={headerRef} className={`z-[110] transition-all duration-700 ease-spring ${fullPageChatOpen ? 'fixed top-0 left-0 right-0' : 'relative'}`}>
                 <div
-                  style={{ paddingTop: '50px' }}
-                  className={`header-safe bg-gradient-to-b from-[#1B3B2F] to-[#163127] transition-all duration-500 relative flex flex-col items-center gap-4 ${fullPageChatOpen ? 'pb-6' : 'pb-4'}`}
+                  style={{ paddingTop: '30px' }}
+                  className={`header-safe bg-gradient-to-b from-[#1B3B2F] to-[#163127] transition-all duration-500 relative flex flex-col items-center gap-1 ${fullPageChatOpen ? 'pb-6' : 'pb-2'}`}
                 >
-                  <Header onOpenChat={() => { if (!currentSession) setCurrentSession(createNewSession()); setFullPageChatOpen(true); }} onOpenProfile={() => setIsProfileModalOpen(true)} userProfile={userProfile} currentUser={currentUser} compact={fullPageChatOpen} isFocusMode={isFocusMode} onToggleFocus={toggleFocusMode} onOpenActivity={handleOpenActivity} />
-                  <div className={`container mx-auto max-w-[1200px] relative z-10 flex justify-center transition-all duration-700 ease-spring ${fullPageChatOpen ? 'py-0' : 'py-2'}`}>
+                  <Header 
+                    onOpenChat={handleOpenFullScreen} 
+                    onOpenProfile={() => setIsProfileModalOpen(true)} 
+                    userProfile={userProfile} 
+                    currentUser={currentUser} 
+                    compact={fullPageChatOpen} 
+                    isFocusMode={isFocusMode} 
+                    onToggleFocus={toggleFocusMode} 
+                    onOpenActivity={handleOpenActivity} 
+                    isPausedLogo={fullPageChatOpen}
+                  />
+                  <div className={`container mx-auto max-w-[1200px] relative z-10 flex justify-center transition-all duration-700 ease-spring ${fullPageChatOpen ? 'py-0' : 'py-0.5'}`}>
                       <QuickLinks compact={fullPageChatOpen} />
                   </div>
                 </div>
                 <div className={`bg-gradient-to-b from-[#163127] to-[#12261E] w-full shadow-inner relative transition-all duration-700 ease-spring overflow-hidden ${fullPageChatOpen ? 'max-h-0 opacity-0' : 'max-h-25 opacity-100'}`}>
                   <div className="w-3/4 mx-auto border-t border-white/10 pt-1"></div>
-                  <div className="container mx-auto py-3 text-center">
+                  <div className="container mx-auto py-3 text-center relative">
                       <button onClick={() => window.location.href = '/?page=tech-info'} className="text-white/90 font-bold tracking-widest text-sm hover:text-falcon-gold transition-colors uppercase flex items-center justify-center w-full">
                           <span className="mr-2">🔧</span> TECH INFO: WIFI, PRINTING & MORE
                       </button>
@@ -342,13 +403,27 @@ const App: React.FC = () => {
                 </div>
             </div>
 
+            {/* Christmas Lights Border Line */}
+            <div className="relative w-full h-0 z-[120] pointer-events-none">
+                <div className="christmas-lights"></div>
+            </div>
+
+            {/* Christmas Toggle */}
+            <button
+              onClick={() => setIsChristmasMode(!isChristmasMode)}
+              className="fixed bottom-6 left-6 z-[200] w-14 h-14 rounded-full bg-white shadow-2xl flex items-center justify-center text-2xl hover:scale-110 transition-transform active:scale-95 border-2 border-red-500"
+              title="Toggle Christmas Mode"
+            >
+              {isChristmasMode ? '🎄' : '🎁'}
+            </button>
+
             {fullPageChatOpen && <div style={{ height: headerHeight }} />}
 
             <div className={`z-[40] flex justify-center transition-all duration-1000 ease-spring ${fullPageChatOpen ? 'opacity-0 pointer-events-none absolute' : 'opacity-100 relative py-12 md:py-16'}`}>
                 <div className={`w-full flex flex-col items-center ${spotifyToken ? 'gap-3' : 'gap-6'}`}>
                     <AIQuickBar
                       onSearch={handleSearch}
-                      onOpenChat={() => { if (!currentSession) setCurrentSession(createNewSession()); setFullPageChatOpen(true); }}
+                      onOpenChat={handleOpenFullScreen}
                       onExpandChange={setIsDashboardBarExpanded}
                       lockScrollOnFocus={false}
                       searchMode="bfhs-google"
@@ -357,7 +432,7 @@ const App: React.FC = () => {
                         <div className="w-full max-w-3xl px-4">
                             <button
                                 onClick={() => setIsHomeSpotifyVisible((prev) => !prev)}
-                                className={`px-3 py-1.5 rounded-full border border-gray-300 text-[10px] uppercase tracking-[0.2em] text-gray-600 hover:text-gray-900 hover:border-gray-400 transition ${
+                                className={`px-4 py-1.5 rounded-full backdrop-blur-md bg-white/40 border border-white/40 shadow-sm text-[10px] uppercase tracking-[0.2em] text-gray-700 hover:text-black hover:bg-white/60 hover:shadow-md transition-all duration-300 ${
                                     isHomeSpotifyVisible ? 'mb-2' : 'mb-1'
                                 }`}
                             >
@@ -403,7 +478,6 @@ const App: React.FC = () => {
               currentSession={currentSession}
               onSwitchSession={setCurrentSession}
               onNewChat={() => setCurrentSession(createNewSession())}
-              topOffset={headerHeight}
               composer={<AIQuickBar onSearch={handleSearch} docked={true} searchMode="bfhs-only" />}
             >
                 <ChatPanel messages={currentSession?.messages || []} isLoading={isSending} userProfile={userProfile} onSignInRequest={() => setIsProfileModalOpen(true)} hideInitialVerifiedSource={true} />

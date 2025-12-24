@@ -42,12 +42,22 @@ export interface UserSchedule {
   B: string[]; // Array of 4 strings for periods 1-4
 }
 
+export interface UserGamification {
+  xp: number;
+  level: number;
+  currentStreak: number;
+  lastFocusDate: string | null; // ISO Date string YYYY-MM-DD
+  totalFocusMinutes: number;
+}
+
 export interface UserProfile {
   uid: string;
   name: string;
+  email?: string;
   grade: string; // "9th", "10th", "11th", "12th"
   allowMemory: boolean;
   schedule?: UserSchedule;
+  gamification?: UserGamification;
   createdAt?: any;
   updatedAt?: any;
 }

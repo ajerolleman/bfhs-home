@@ -27,7 +27,12 @@ function getCurrentBlock(now = new Date()) {
   const firstStart = toTodayDate(BLOCK_SCHEDULE[0].start);
   const lastEnd = toTodayDate(BLOCK_SCHEDULE[BLOCK_SCHEDULE.length - 1].end);
   
-  if (now < firstStart) return { name: "Before school", start: now, end: firstStart, type: 'idle' };
+  if (now < firstStart) {
+    if (now.getHours() < 5) {
+      return { name: "School is out!", start: now, end: firstStart, type: 'idle' };
+    }
+    return { name: "Before school", start: now, end: firstStart, type: 'idle' };
+  }
   if (now >= lastEnd) return { name: "School is out!", start: lastEnd, end: lastEnd, type: 'idle' };
   
   return { name: "Schedule", start: now, end: null, type: 'idle' };
@@ -79,6 +84,7 @@ function getDayType(date: Date): "A" | "B" | "Weekend" {
 const DayTicker: React.FC<DayTickerProps> = ({ userProfile, onOpenActivity }) => {
   const [text, setText] = useState("");
   const [dayLabel, setDayLabel] = useState("A Day");
+  const [timeString, setTimeString] = useState("");
   const [progress, setProgress] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [dayType, setDayType] = useState<"A"|"B"|"Weekend">("A");
@@ -86,6 +92,7 @@ const DayTicker: React.FC<DayTickerProps> = ({ userProfile, onOpenActivity }) =>
   useEffect(() => {
     const tick = () => {
       const now = new Date();
+      setTimeString(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
       const type = getDayType(now);
       
       if (type !== dayType) {

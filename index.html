@@ -147,6 +147,155 @@
         justify-content: center;
         align-items: center;
       }
+
+      /* Christmas Mode Styles */
+      body.christmas-mode {
+        background-color: #ffffff !important;
+        background-image: 
+          linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.2)),
+          url("https://t3.ftcdn.net/jpg/03/05/14/48/360_F_305144878_OMA5iXpxmDowvZZLz1TOjt78lMa41GqF.jpg") !important;
+        background-size: cover, 400px auto !important;
+        background-repeat: no-repeat, repeat !important;
+        background-blend-mode: normal;
+      }
+
+      /* Make dashboard elements pop in Christmas mode */
+      .christmas-mode .oled-card,
+      .christmas-mode .bg-white,
+      .christmas-mode main {
+        background-color: rgba(255, 255, 255, 0.95) !important;
+        border: 2px solid #d42426 !important;
+        box-shadow: 0 20px 40px -10px rgba(0,0,0,0.3) !important;
+      }
+
+      .christmas-mode .news-card {
+        background-color: white !important;
+      }
+
+      .christmas-mode .christmas-letter {
+        animation: christmasLetterStep 1.5s step-end infinite;
+        display: inline-block;
+        white-space: pre;
+      }
+
+      @keyframes christmasLetterStep {
+        0% { color: #ffffff; }
+        25% { color: #ff0000; }
+        50% { color: #00ff00; }
+        75% { color: #f1c40f; }
+      }
+
+      .christmas-mode .magnetic-btn {
+        background: repeating-linear-gradient(
+          45deg,
+          #d42426,
+          #d42426 15px,
+          #10b981 15px,
+          #10b981 30px
+        ) !important;
+        color: white !important;
+        border: 2px solid white !important;
+        text-shadow: 1px 1px 2px black;
+      }
+
+      .christmas-lights {
+        display: none;
+        position: absolute;
+        top: -6px;
+        left: 0;
+        right: 0;
+        height: 40px;
+        pointer-events: none;
+        z-index: 100;
+        border-top: 1.5px solid rgba(255,255,255,0.3);
+        background-image: 
+            radial-gradient(ellipse 8px 16px at 5% 20%, #ff0000 90%, transparent 100%),
+            radial-gradient(ellipse 8px 16px at 15% 35%, #00ff00 90%, transparent 100%),
+            radial-gradient(ellipse 8px 16px at 25% 15%, #ffff00 90%, transparent 100%),
+            radial-gradient(ellipse 8px 16px at 35% 40%, #0000ff 90%, transparent 100%),
+            radial-gradient(ellipse 8px 16px at 45% 25%, #ff00ff 90%, transparent 100%),
+            radial-gradient(ellipse 8px 16px at 55% 35%, #ff0000 90%, transparent 100%),
+            radial-gradient(ellipse 8px 16px at 65% 15%, #00ff00 90%, transparent 100%),
+            radial-gradient(ellipse 8px 16px at 75% 40%, #ffff00 90%, transparent 100%),
+            radial-gradient(ellipse 8px 16px at 85% 25%, #0000ff 90%, transparent 100%),
+            radial-gradient(ellipse 8px 16px at 95% 35%, #ff00ff 90%, transparent 100%);
+        background-size: 100% 100%;
+        animation: blink 1s step-end infinite;
+      }
+
+      .christmas-mode .christmas-lights {
+        display: block;
+      }
+
+      /* SVG Logo Animations */
+      .school-logo-svg {
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+      }
+
+      #orbit-group, .ring {
+        transform-origin: 200px 200px;
+      }
+
+      #ring-1 { animation: orbitSpin 12s linear infinite; }
+      #ring-2 { animation: orbitSpinReverse 15s linear infinite; }
+
+      #key-container {
+        transform-origin: 200px 200px;
+        animation: keyFloat 4s ease-in-out infinite; 
+      }
+
+      .star {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: starTwinkle 3s infinite alternate;
+      }
+
+      #star-1 { animation-delay: 0s; }
+      #star-2 { animation-delay: 1.2s; }
+      #star-3 { animation-delay: 2.5s; }
+
+      @keyframes orbitSpin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+
+      @keyframes orbitSpinReverse {
+        from { transform: rotate(360deg); }
+        to { transform: rotate(0deg); }
+      }
+
+      @keyframes keyFloat {
+        0%, 100% { transform: translateY(0px) rotate(-45deg); }
+        50% { transform: translateY(-10px) rotate(-45deg); }
+      }
+
+      @keyframes starTwinkle {
+        0%, 100% { opacity: 0.5; transform: scale(0.8); }
+        50% { opacity: 1; transform: scale(1.4); }
+      }
+
+      /* Christmas Mode overrides for Final Big Key Logo */
+      .christmas-mode #ring-1, .christmas-mode #ring-2 { animation: logoColorChange 2s step-end infinite; }
+      .christmas-mode #key-container circle, .christmas-mode #key-container line { animation: logoColorChange 2s step-end infinite 0.5s; }
+      .christmas-mode .star { animation: logoColorChange 2s step-end infinite 1s, starTwinkle 3s infinite alternate; }
+
+      @keyframes logoColorChange {
+        0% { color: #ff0000; }
+        25% { color: #00ff00; }
+        50% { color: #ffffff; }
+        75% { color: #f1c40f; }
+      }
+
+      @keyframes blink {
+        0%, 100% { filter: drop-shadow(0 0 15px #ff0000); opacity: 1; }
+        20% { filter: drop-shadow(0 0 15px #00ff00); opacity: 0.8; }
+        40% { filter: drop-shadow(0 0 15px #ffff00); opacity: 1; }
+        60% { filter: drop-shadow(0 0 15px #0000ff); opacity: 0.8; }
+        80% { filter: drop-shadow(0 0 15px #ff00ff); opacity: 1; }
+      }
+
     </style>
   <script type="importmap">
 {
