@@ -13,7 +13,7 @@ const CommunityOverlay: React.FC<CommunityOverlayProps> = ({ isOpen, onClose, us
     if (!isOpen) return null;
 
     return (
-        <div className="fixed -inset-4 z-[200] flex flex-col bg-[#2c241b] animate-slide-down-homemade overflow-hidden font-sans">
+        <div className="fixed -inset-4 z-[200] flex flex-col bg-[#2c241b] animate-expand-clunky origin-top overflow-hidden font-sans">
             {/* Corkboard Texture Effect */}
             <div className="absolute inset-0 opacity-40 pointer-events-none" 
                  style={{ 
