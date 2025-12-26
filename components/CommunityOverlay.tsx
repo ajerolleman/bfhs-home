@@ -17,8 +17,16 @@ const CommunityOverlay: React.FC<CommunityOverlayProps> = ({ isOpen, onClose, us
             {/* Backdrop (invisible but stays for logical closing if needed) */}
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={onClose} />
             
-            {/* The Board itself - Clunky Expansion (Full Screen) */}
-            <div className="relative w-full h-full shadow-2xl flex flex-col bg-[#2c241b] animate-expand-clunky origin-top overflow-hidden font-sans">
+            {/* The Board itself - Clunky Pulldown (Full Screen) */}
+            <div className="relative w-full h-full shadow-2xl flex flex-col bg-[#2c241b] animate-pull-down-clunky origin-top overflow-hidden font-sans">
+                {/* Pull Handle (Visual) */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center group pointer-events-none z-[50]">
+                    <div className="w-1 h-12 bg-white/20 rounded-full mb-1"></div>
+                    <div className="w-8 h-8 rounded-full border-4 border-white/20 flex items-center justify-center text-white/40 font-bold">
+                        ⤓
+                    </div>
+                </div>
+
                 {/* Corkboard Texture Effect */}
                 <div className="absolute inset-0 opacity-40 pointer-events-none" 
                      style={{ 
@@ -39,13 +47,14 @@ const CommunityOverlay: React.FC<CommunityOverlayProps> = ({ isOpen, onClose, us
                         </h2>
                     </div>
 
-                    <button 
-                        onClick={onClose}
-                        className="w-12 h-12 rounded-full bg-black/20 hover:bg-black/40 text-white/80 hover:text-white flex items-center justify-center transition-all text-xl backdrop-blur-sm border-2 border-white/10"
-                    >
-                        ✕
-                    </button>
-                </div>
+                                    <button 
+                                        onClick={onClose}
+                                        className="group relative px-6 py-2 bg-red-500/10 hover:bg-red-500 text-red-200 hover:text-white transition-all duration-300 transform rotate-2 hover:rotate-0 border-2 border-red-500/20 hover:border-white shadow-lg"
+                                    >
+                                        {/* Tape on close button */}
+                                        <div className="absolute -top-3 left-1/4 w-8 h-4 bg-white/30 rotate-12 group-hover:opacity-0 transition-opacity"></div>
+                                        <span className="font-black uppercase tracking-widest text-xs relative z-10">Push Back Up</span>
+                                    </button>                </div>
 
                 {/* Content - Bulletin Layout */}
                 <div className="flex-1 overflow-y-auto p-4 md:p-8 relative z-10 custom-scrollbar">
