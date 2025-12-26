@@ -15,14 +15,16 @@ import {
   collection, 
   addDoc, 
   query, 
+  where,
   orderBy, 
   limit, 
   getDocs,
+  runTransaction,
+  arrayUnion,
   serverTimestamp,
-  deleteDoc,
-  where
+  deleteDoc
 } from "firebase/firestore";
-import { UserProfile, MemoryNote } from "../types";
+import { UserProfile, MemoryNote, Poll, PollOption } from "../types";
 
 // --- Configuration Management ---
 
@@ -42,7 +44,6 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
-  hd: "bfhsla.org",
   prompt: "select_account"
 });
 
@@ -175,6 +176,259 @@ export const getLeaderboard = async (limitCount: number = 10): Promise<UserProfi
     console.warn("Error fetching leaderboard:", e);
     return [];
   }
+};
+
+export const getTopUserInGrade = async (grade: string): Promise<UserProfile | null> => {
+  try {
+    const usersRef = collection(db, "users");
+    const q = query(
+      usersRef, 
+      where("grade", "==", grade), 
+      orderBy("gamification.xp", "desc"), 
+      limit(1)
+    );
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      const doc = querySnapshot.docs[0];
+      return { uid: doc.id, ...doc.data() } as UserProfile;
+    }
+    return null;
+  } catch (e: any) {
+    if (e.code === 'failed-precondition') {
+        console.error("⚠️ MISSING INDEX: Click the link below to create it automatically:");
+        console.error(e.message); // This contains the direct link
+    }
+    console.warn("Error fetching top grade user:", e);
+    return null;
+  }
+};
+
+export const getUserRankInGrade = async (grade: string, xp: number): Promise<{ rank: number, total: number } | null> => {
+  try {
+    const usersRef = collection(db, "users");
+    
+    // Count users with more XP in the same grade
+    // Note: We order by DESC to share the index with getTopUserInGrade
+    const qBetter = query(
+      usersRef, 
+      where("grade", "==", grade), 
+      where("gamification.xp", ">", xp),
+      orderBy("gamification.xp", "desc")
+    );
+    const betterSnapshot = await getDocs(qBetter);
+    const rank = betterSnapshot.size + 1;
+
+    // Count total users in grade (this might be expensive if thousands, but okay for hundreds)
+    // Optimization: Store total count in a metadata document or use count() aggregation if available in this SDK version
+    const qTotal = query(usersRef, where("grade", "==", grade));
+    const totalSnapshot = await getDocs(qTotal);
+    const total = totalSnapshot.size;
+
+    return { rank, total };
+  } catch (e: any) {
+    if (e.code === 'failed-precondition') {
+        console.error("⚠️ MISSING INDEX: Click the link below to create it automatically:");
+        console.error(e.message); // This contains the direct link
+    }
+    console.warn("Error calculating rank:", e);
+    throw e;
+  }
+};
+
+// ============================================================================
+// POLLS (THE DAILY PULSE)
+// ============================================================================
+
+export const deactivateAllPolls = async () => {
+    console.log("[Polls] Deactivating all polls. Current User:", auth.currentUser?.uid);
+    try {
+        const pollsRef = collection(db, "polls");
+        const q = query(pollsRef, where("isActive", "==", true));
+        const snapshot = await getDocs(q);
+        
+        const updates = snapshot.docs.map(doc => setDoc(doc.ref, { isActive: false }, { merge: true }));
+        await Promise.all(updates);
+    } catch (e) {
+        console.error("Error deactivating polls:", e);
+    }
+};
+
+export const createPoll = async (question: string, options: string[]) => {
+    console.log("[Polls] Creating poll. Current User:", auth.currentUser?.uid);
+    if (!auth.currentUser) throw "Must be logged in to create a poll.";
+    
+    try {
+        // 1. Deactivate old polls first
+        await deactivateAllPolls();
+
+        // 2. Create new one
+        const pollRef = doc(collection(db, "polls"));
+        const newPoll: any = {
+            question,
+            options: options.map((text, index) => ({
+                id: `opt-${index}`,
+                text,
+                votes: 0
+            })),
+            createdAt: serverTimestamp(),
+            isActive: true,
+            totalVotes: 0,
+            voters: []
+        };
+        await setDoc(pollRef, newPoll);
+        return pollRef.id;
+    } catch (e) {
+        console.error("Error creating poll:", e);
+        throw e;
+    }
+};
+
+export const getActivePoll = async (userId?: string): Promise<Poll | null> => {
+    try {
+        const pollsRef = collection(db, "polls");
+        const q = query(pollsRef, where("isActive", "==", true), orderBy("createdAt", "desc"), limit(1));
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) return null;
+        
+        const docSnap = snapshot.docs[0];
+        const data = docSnap.data();
+        
+        const hasVoted = userId && data.voters && data.voters.includes(userId);
+        
+        return {
+            id: docSnap.id,
+            question: data.question,
+            options: data.options,
+            createdAt: data.createdAt,
+            isActive: data.isActive,
+            totalVotes: data.totalVotes,
+            userVotedOptionId: hasVoted ? "voted" : null
+        };
+    } catch (e) {
+        console.error("Error fetching poll:", e);
+        return null;
+    }
+};
+
+export const voteInPoll = async (pollId: string, optionId: string, userId: string) => {
+    const pollRef = doc(db, "polls", pollId);
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const pollDoc = await transaction.get(pollRef);
+            if (!pollDoc.exists()) throw "Poll does not exist!";
+
+            const data = pollDoc.data();
+            if (data.voters && data.voters.includes(userId)) {
+                throw "You have already voted in this poll.";
+            }
+
+            const newOptions = data.options.map((opt: any) => {
+                if (opt.id === optionId) {
+                    return { ...opt, votes: opt.votes + 1 };
+                }
+                return opt;
+            });
+
+            transaction.update(pollRef, {
+                options: newOptions,
+                totalVotes: (data.totalVotes || 0) + 1,
+                voters: arrayUnion(userId)
+            });
+        });
+    } catch (e) {
+        console.error("Vote failed:", e);
+        throw e;
+    }
+};
+
+// ============================================================================
+// VIBE CHECK (HOW ARE YOU FEELING?)
+// ============================================================================
+
+export const getVibeCheck = async (userId?: string) => {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const vibeRef = doc(db, "daily_vibes", today);
+    
+    try {
+        const docSnap = await getDoc(vibeRef);
+        if (!docSnap.exists()) {
+            return {
+                average: 50,
+                count: 0,
+                userVoted: false,
+                userVote: null
+            };
+        }
+        
+        const data = docSnap.data();
+        // Check map first, then fallback to array check for backward compat
+        const userVote = userId && data.votesMap ? data.votesMap[userId] : null;
+        const userVoted = userVote !== null && userVote !== undefined;
+        
+        const avg = data.count > 0 ? data.sum / data.count : 50;
+        
+        return {
+            average: avg,
+            count: data.count || 0,
+            userVoted,
+            userVote
+        };
+    } catch (e) {
+        console.error("Error fetching vibes:", e);
+        return null;
+    }
+};
+
+export const submitVibeCheck = async (value: number, userId: string) => {
+    const today = new Date().toISOString().split('T')[0];
+    const vibeRef = doc(db, "daily_vibes", today);
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const docSnap = await transaction.get(vibeRef);
+            
+            if (!docSnap.exists()) {
+                // Create for today
+                transaction.set(vibeRef, {
+                    date: today,
+                    sum: value,
+                    count: 1,
+                    votesMap: { [userId]: value }
+                });
+            } else {
+                const data = docSnap.data();
+                const votesMap = data.votesMap || {};
+                const previousVote = votesMap[userId];
+                
+                let newSum = data.sum || 0;
+                let newCount = data.count || 0;
+
+                if (previousVote !== undefined) {
+                    // Updating existing vote
+                    newSum = newSum - previousVote + value;
+                    // Count stays same
+                } else {
+                    // New vote
+                    newSum = newSum + value;
+                    newCount = newCount + 1;
+                }
+                
+                // Update map
+                votesMap[userId] = value;
+
+                transaction.update(vibeRef, {
+                    sum: newSum,
+                    count: newCount,
+                    votesMap: votesMap
+                });
+            }
+        });
+    } catch (e) {
+        console.error("Vibe check failed:", e);
+        throw e;
+    }
 };
 
 export { auth, db };

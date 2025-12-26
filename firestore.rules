@@ -1,0 +1,42 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users Collection
+    match /users/{userId} {
+      // Allow any authenticated user to READ user profiles (Required for Leaderboards/Rank)
+      allow read: if request.auth != null;
+      // Only the user themselves to WRITE/EDIT their own profile
+      allow write: if request.auth != null && request.auth.uid == userId;
+
+      // Memory Notes Subcollection
+      // STRICTLY PRIVATE: Only the user can read or write their own notes
+      match /memory_notes/{noteId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Compliments Subcollection
+      // (Kept per request, even if frontend usage is removed)
+      match /compliments/{complimentId} {
+        // Allow ANY student to send a message to this user
+        allow create: if request.auth != null;
+        // ONLY the user (the recipient) can read their own messages
+        allow read: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Polls (The Daily Pulse)
+    match /polls/{pollId} {
+      // Allow EVERYONE (even guests) to see the poll so it loads
+      allow read: if true;
+      // Allow logged-in users to Create and Vote (Update)
+      allow create, update: if request.auth != null;
+    }
+
+    // Daily Vibes
+    match /daily_vibes/{dateId} {
+      allow read: if true;
+      allow create, update: if request.auth != null;
+    }
+  }
+}

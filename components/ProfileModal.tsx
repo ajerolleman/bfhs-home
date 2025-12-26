@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { UserProfile, MemoryNote } from '../types';
 import { 
@@ -8,6 +7,7 @@ import {
     getRecentMemoryNotes
 } from '../services/firebase';
 import { clearSpotifyAuth, getSpotifyLoginUrl } from '../services/authService';
+import SchoolLogo from './SchoolLogo';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -21,14 +21,33 @@ interface ProfileModalProps {
 const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, profile, onProfileUpdate, authMessage }) => {
   const [name, setName] = useState(profile?.name || '');
   const [grade, setGrade] = useState(profile?.grade || '9th');
-  const [allowMemory, setAllowMemory] = useState(profile?.allowMemory ?? true);
-  const [activeTab, setActiveTab] = useState<'profile' | 'schedule' | 'memory' | 'spotify'>('profile');
+  const [allowMemory, setAllowMemory] = useState(true);
+  const [activeTab, setActiveTab] = useState<'profile' | 'schedule' | 'spotify'>('profile');
   const [notes, setNotes] = useState<MemoryNote[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   
   // Schedule State
   const [scheduleA, setScheduleA] = useState<string[]>(['', '', '', '']);
   const [scheduleB, setScheduleB] = useState<string[]>(['', '', '', '']);
+
+  const calculateGradeFromEmail = (email: string): string => {
+      const prefix = email.split('@')[0];
+      // Match the last 2 digits at the end of the prefix
+      const match = prefix.match(/(\d{2})$/);
+      if (!match) return 'Faculty';
+      
+      const year = parseInt(match[1], 10);
+      // Logic for 2025-2026 school year:
+      // 26 -> 12th
+      // 27 -> 11th
+      // 28 -> 10th
+      // 29 -> 9th
+      if (year === 29) return '9th';
+      if (year === 28) return '10th';
+      if (year === 27) return '11th';
+      if (year === 26) return '12th';
+      return 'Student'; 
+  };
 
   useEffect(() => {
     if (profile) {
@@ -42,14 +61,18 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, prof
     } else if (user && user.displayName) {
         // Auto-fill name from Google Account if profile doesn't exist
         setName(user.displayName);
+        if (user.email) {
+            setGrade(calculateGradeFromEmail(user.email));
+        }
+    }
+    // Always force update grade from email if user exists, to keep it sync
+    if (user && user.email) {
+        const calculated = calculateGradeFromEmail(user.email);
+        if (calculated !== 'Faculty' && calculated !== 'Student') {
+             setGrade(calculated);
+        }
     }
   }, [profile, user]);
-
-  useEffect(() => {
-    if (isOpen && activeTab === 'memory' && user && profile?.allowMemory) {
-        getRecentMemoryNotes(user.uid, 20).then(setNotes);
-    }
-  }, [isOpen, activeTab, user, profile]);
 
   const handleSave = async () => {
     if (!user) return;
@@ -57,6 +80,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, prof
     const newProfile = {
       uid: user.uid,
       name,
+      email: user.email, // Add this so people can find you by email
       grade,
       allowMemory,
       schedule: {
@@ -121,7 +145,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, prof
                     <div>
                         <h3 className="text-xl font-bold text-gray-800 mb-2">Login Required</h3>
                         <p className="text-gray-600 text-sm">
-                            Please sign in with your BFHS Google account (@bfhsla.org) to access the student portal.
+                            Please sign in with your student Google account to access the portal.
                         </p>
                     </div>
 
@@ -162,13 +186,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, prof
                             Schedule
                         </button>
                         <button 
-                             onClick={() => setActiveTab('memory')}
-                             disabled={!allowMemory}
-                             className={`flex-1 py-2 text-sm font-bold border-b-2 transition-colors ${activeTab === 'memory' ? 'border-falcon-green text-falcon-green' : 'border-transparent text-gray-500'} ${!allowMemory ? 'opacity-50 cursor-not-allowed' : 'hover:text-gray-700'}`}
-                        >
-                            Memory
-                        </button>
-                        <button 
                              onClick={() => setActiveTab('spotify')}
                              className={`flex-1 py-2 text-sm font-bold border-b-2 transition-colors ${activeTab === 'spotify' ? 'border-falcon-green text-falcon-green' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
                         >
@@ -187,31 +204,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, prof
                                     placeholder="e.g. Jordan"
                                     className="w-full p-3 rounded-lg bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-falcon-green focus:outline-none"
                                 />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">Grade Level</label>
-                                <select 
-                                    value={grade}
-                                    onChange={(e) => setGrade(e.target.value)}
-                                    className="w-full p-3 rounded-lg bg-gray-50 border border-gray-200 focus:ring-2 focus:ring-falcon-green focus:outline-none"
-                                >
-                                    <option value="9th">9th Grade</option>
-                                    <option value="10th">10th Grade</option>
-                                    <option value="11th">11th Grade</option>
-                                    <option value="12th">12th Grade</option>
-                                    <option value="Faculty">Faculty</option>
-                                </select>
-                            </div>
-                            
-                            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
-                                <div>
-                                    <h4 className="font-bold text-sm text-blue-900">Allow Memory</h4>
-                                    <p className="text-xs text-blue-800 opacity-80">BFHS Help can remember key details to help tutor you better.</p>
-                                </div>
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" checked={allowMemory} onChange={(e) => setAllowMemory(e.target.checked)} className="sr-only peer" />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-falcon-green"></div>
-                                </label>
                             </div>
                          </div>
                      )}
@@ -294,30 +286,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, prof
                                  >
                                      Disconnect Spotify
                                  </button>
-                             </div>
-                         </div>
-                     )}
-
-                     {activeTab === 'memory' && (
-                         <div className="space-y-4">
-                             <p className="text-xs text-gray-500">BFHS Help keeps up to 50 short notes. Oldest ones are deleted automatically.</p>
-                             <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
-                                 {notes.length === 0 ? (
-                                     <div className="text-center py-8 text-gray-400 text-sm">No memories saved yet.</div>
-                                 ) : (
-                                     notes.map(note => (
-                                         <div key={note.id} className="group flex justify-between items-start p-3 bg-gray-50 rounded border border-gray-100">
-                                             <p className="text-sm text-gray-800">{note.note}</p>
-                                             <button 
-                                                onClick={() => handleDeleteNote(note.id)}
-                                                className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                                                title="Delete memory"
-                                             >
-                                                 🗑️
-                                             </button>
-                                         </div>
-                                     ))
-                                 )}
                              </div>
                          </div>
                      )}

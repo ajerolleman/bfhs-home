@@ -15,10 +15,11 @@ import ChatOverlay from './components/ChatOverlay';
 import ChatPanel from './components/ChatPanel';
 import FocusOverlay from './components/FocusOverlay';
 import ActivityOverlay from './components/ActivityOverlay';
-import { subscribeToAuth, getUserProfile, getRecentMemoryNotes, logout } from './services/firebase';
+import CommunityOverlay from './components/CommunityOverlay';
+import { subscribeToAuth, getUserProfile, getRecentMemoryNotes, logout, saveUserProfile } from './services/firebase';
 import { sendMessageToGemini } from './services/geminiService';
 import { createNewSession, saveSession } from './services/chatHistoryService';
-import { initSpotifyAuth, exchangeSpotifyCodeForToken, getStoredSpotifyToken } from './services/authService';
+import { initSpotifyAuth, exchangeSpotifyCodeForToken, getStoredSpotifyToken, loginToSpotify } from './services/authService';
 import { UserProfile, ChatMessage, MemoryNote, ChatSession } from './types';
 
 const App: React.FC = () => {
@@ -74,6 +75,42 @@ const App: React.FC = () => {
   const [isDashboardBarExpanded, setIsDashboardBarExpanded] = useState(false);
   const [isActivityOpen, setIsActivityOpen] = useState(false);
   const [activitySpotifySlot, setActivitySpotifySlot] = useState<HTMLDivElement | null>(null);
+  const [isCommunityOpen, setIsCommunityOpen] = useState(false);
+
+  // ROUTING LOGIC
+  useEffect(() => {
+      // 1. Check URL on load
+      if (window.location.pathname === '/community') {
+          setIsCommunityOpen(true);
+      }
+
+      // 2. Listen for back/forward button
+      const handlePopState = () => {
+          if (window.location.pathname === '/community') {
+              setIsCommunityOpen(true);
+          } else {
+              setIsCommunityOpen(false);
+          }
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const handleOpenCommunity = () => {
+      setIsCommunityOpen(true);
+      window.history.pushState({ page: 'community' }, '', '/community');
+  };
+
+  const handleCloseCommunity = () => {
+      setIsCommunityOpen(false);
+      // Go back if possible, otherwise replace
+      if (window.history.state?.page === 'community') {
+          window.history.back();
+      } else {
+          window.history.pushState(null, '', '/');
+      }
+  };
   
   // Christmas Mode - Default to TRUE, then check localStorage
   const [isChristmasMode, setIsChristmasMode] = useState(() => {
@@ -255,7 +292,9 @@ const App: React.FC = () => {
     const unsubscribe = subscribeToAuth(async (user) => {
       setAuthChecked(true);
       const email = user?.email?.toLowerCase() || '';
-      if (user && !email.endsWith('@bfhsla.org')) {
+      const isWhitelisted = email === 'ajerolleman1@gmail.com';
+      
+      if (user && !email.endsWith('@bfhsla.org') && !isWhitelisted) {
         setAuthError('Please sign in with your @bfhsla.org email address to access BFHS Internal.');
         setCurrentUser(null);
         setUserProfile(null);
@@ -267,12 +306,23 @@ const App: React.FC = () => {
       if (user) {
         setAuthError(null);
         const profile = await getUserProfile(user.uid);
+        
+        // AUTO-SAVE EMAIL: If profile exists or is new, ensure email is synced
+        const baseProfile = {
+            uid: user.uid,
+            name: profile?.name || user.displayName || 'Student',
+            email: user.email?.toLowerCase(),
+            grade: profile?.grade || '9th',
+            allowMemory: profile?.allowMemory ?? true
+        };
+        await saveUserProfile(user.uid, baseProfile);
+
         if (profile) {
-          setUserProfile(profile);
+          setUserProfile({ ...profile, ...baseProfile });
           setIsProfileModalOpen(false);
         }
         else {
-          setUserProfile(null);
+          setUserProfile(baseProfile as UserProfile);
           setIsProfileModalOpen(true);
         }
       } else {
@@ -317,7 +367,8 @@ const App: React.FC = () => {
       } finally { setIsSending(false); }
   };
 
-  const isAuthorized = Boolean(currentUser?.email && currentUser.email.toLowerCase().endsWith('@bfhsla.org'));
+  const isWhitelisted = currentUser?.email?.toLowerCase() === 'ajerolleman1@gmail.com';
+  const isAuthorized = Boolean((currentUser?.email && currentUser.email.toLowerCase().endsWith('@bfhsla.org')) || isWhitelisted);
 
   if (!authChecked) {
     return (
@@ -369,6 +420,8 @@ const App: React.FC = () => {
           spotifyArtworkUrl={spotifyArtworkUrl}
           isMixesOpen={isMixesOpen}
           spotifySlotRef={setFocusSpotifySlot}
+          onSpotifyLogin={loginToSpotify}
+          isSpotifyConnected={Boolean(spotifyToken)}
         />
         {spotifyPortal}
 
@@ -387,6 +440,7 @@ const App: React.FC = () => {
                     isFocusMode={isFocusMode} 
                     onToggleFocus={toggleFocusMode} 
                     onOpenActivity={handleOpenActivity} 
+                    onOpenCommunity={handleOpenCommunity}
                     isPausedLogo={fullPageChatOpen}
                   />
                   <div className={`container mx-auto max-w-[1200px] relative z-10 flex justify-center transition-all duration-700 ease-spring ${fullPageChatOpen ? 'py-0' : 'py-0.5'}`}>
@@ -467,8 +521,8 @@ const App: React.FC = () => {
                   </div>
 
                   <footer className="text-center text-xs text-gray-400 font-mono mt-20 mb-4 border-t border-gray-200 dark:border-white/5 pt-8">
-                      <p>BEN FRANKLIN HIGH SCHOOL • KATHERINE JOHNSON CAMPUS</p>
-                      <p className="mt-2 opacity-60">Internal Student Portal © {new Date().getFullYear()}</p>
+                      <p>BEN FRANKLIN HIGH SCHOOL</p>
+                      <p className="mt-2 opacity-60">Katherine Johnson Campus © {new Date().getFullYear()}</p>
                   </footer>
             </main>
 
@@ -478,6 +532,7 @@ const App: React.FC = () => {
               currentSession={currentSession}
               onSwitchSession={setCurrentSession}
               onNewChat={() => setCurrentSession(createNewSession())}
+              topOffset={0}
               composer={<AIQuickBar onSearch={handleSearch} docked={true} searchMode="bfhs-only" />}
             >
                 <ChatPanel messages={currentSession?.messages || []} isLoading={isSending} userProfile={userProfile} onSignInRequest={() => setIsProfileModalOpen(true)} hideInitialVerifiedSource={true} />
@@ -488,6 +543,12 @@ const App: React.FC = () => {
               onClose={() => setIsActivityOpen(false)}
               userProfile={userProfile}
               spotifySlotRef={setActivitySpotifySlot}
+            />
+
+            <CommunityOverlay
+                isOpen={isCommunityOpen}
+                onClose={handleCloseCommunity}
+                userProfile={userProfile}
             />
 
             <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} user={currentUser} profile={userProfile} onProfileUpdate={setUserProfile} authMessage={authError} />

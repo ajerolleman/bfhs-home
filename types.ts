@@ -47,6 +47,7 @@ export interface UserGamification {
   level: number;
   currentStreak: number;
   lastFocusDate: string | null; // ISO Date string YYYY-MM-DD
+  dailyFocusMinutes: number; // Track daily progress for streak
   totalFocusMinutes: number;
 }
 
@@ -57,7 +58,9 @@ export interface UserProfile {
   grade: string; // "9th", "10th", "11th", "12th"
   allowMemory: boolean;
   schedule?: UserSchedule;
-  gamification?: UserGamification;
+  gamification: UserGamification;
+  cardUrl?: string;
+  lastCardGenTime?: number;
   createdAt?: any;
   updatedAt?: any;
 }
@@ -67,4 +70,20 @@ export interface MemoryNote {
   note: string; // max 140 chars
   source: 'user' | 'tutor' | 'system';
   createdAt: any;
+}
+
+export interface PollOption {
+  id: string;
+  text: string;
+  votes: number;
+}
+
+export interface Poll {
+  id: string;
+  question: string;
+  options: PollOption[];
+  createdAt: any;
+  isActive: boolean;
+  totalVotes: number;
+  userVotedOptionId?: string | null; // For UI state
 }

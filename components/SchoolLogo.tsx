@@ -9,6 +9,7 @@ interface SchoolLogoProps {
 const SchoolLogo: React.FC<SchoolLogoProps> = ({ className = "", size = "100%", isPaused = false }) => {
     // Hardcoded white to ensure it matches the reference image exactly
     const color = "#ffffff";
+    const keyColor = "#ffffff"; // White for all pages except Christmas mode
     const bgColor = "#0e2a22"; // Used to mask the lines behind the key head
 
     return (
@@ -28,9 +29,9 @@ const SchoolLogo: React.FC<SchoolLogoProps> = ({ className = "", size = "100%", 
                     transform-origin: 200px 200px;
                 }
 
-                #key {
-                    animation: float 4s ease-in-out infinite;
-                    transform-origin: 200px 16px;
+                .key-part {
+                    animation: float 8s ease-in-out infinite;
+                    transform-origin: 200px 10px;
                     filter: url(#keyEffect);
                 }
 
@@ -41,80 +42,76 @@ const SchoolLogo: React.FC<SchoolLogoProps> = ({ className = "", size = "100%", 
                 }
 
                 .weaving-segment {
-                    stroke: white;
-                    stroke-width: 8px;
-                    transition: stroke 0.5s ease;
+                    display: none;
                 }
 
-                /* --- ADVANCED CHRISTMAS COLOR & GLOW ANIMATIONS --- */
+                /* --- ELEGANT CHRISTMAS MODE --- */
                 .christmas-mode .school-logo-container svg {
                     overflow: visible !important;
                 }
 
-                .christmas-mode .christmas-glow-group {
-                    filter: url(#christmasGlow);
-                }
-
+                /* Outer Rim - Gentle Holiday Pulse */
                 .christmas-mode .outer-rim {
                     stroke: url(#christmasRimGradient) !important;
                     stroke-width: 14px;
-                    stroke-dasharray: none; /* Reset if any */
-                    animation: holidayGlowPulse 6s ease-in-out infinite;
+                    stroke-dasharray: none;
                     stroke-linecap: round;
+                    animation: holidayPulse 4s ease-in-out infinite alternate;
                 }
 
-                /* Festive Color Cycling for all elements */
-                .christmas-mode #orbits ellipse, 
-                .christmas-mode .weaving-segment {
-                    stroke: url(#christmasRimGradient) !important;
-                    stroke-width: 10px;
+                /* Background Rings - Futuristic Gradient Flow */
+                .christmas-mode #orbits ellipse {
+                    stroke: url(#ringGradient) !important;
+                    stroke-width: 8px;
+                    opacity: 1.0;
+                    filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.8)) brightness(1.3);
+                }
+                
+                /* Animate Gradient Stops for Rings */
+                .christmas-mode #ringGradient stop:nth-child(1) { animation: gradientShiftRing1 8s ease-in-out infinite alternate; }
+                .christmas-mode #ringGradient stop:nth-child(2) { animation: gradientShiftRing2 8s ease-in-out infinite alternate; }
+
+                /* Key - Futuristic Metallic Flow */
+                .christmas-mode .key-part line,
+                .christmas-mode #key-head circle { 
+                    stroke: url(#keyGradient) !important;
+                    filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.8)) brightness(1.2);
+                }
+                
+                /* Animate Gradient Stops for Key */
+                .christmas-mode #keyGradient stop:nth-child(1) { animation: gradientShiftKey1 6s ease-in-out infinite alternate; }
+                .christmas-mode #keyGradient stop:nth-child(2) { animation: gradientShiftKey2 6s ease-in-out infinite alternate; }
+
+                /* --- GRADIENT ANIMATIONS --- */
+                
+                @keyframes gradientShiftRing1 {
+                    0% { stop-color: #ff0033; }   /* Saturated Red-Pink */
+                    100% { stop-color: #00ff66; } /* Saturated Spring Green */
+                }
+                @keyframes gradientShiftRing2 {
+                    0% { stop-color: #00ffcc; }   /* Cyan-ish Green */
+                    100% { stop-color: #ffffff; } /* White */
                 }
 
-                .christmas-mode #orbits ellipse:nth-child(2) {
-                    animation: none; /* Gradient rotation handles movement */
+                @keyframes gradientShiftKey1 {
+                    0% { stop-color: #ffcc00; }   /* Deep Vivid Gold */
+                    100% { stop-color: #ff8800; } /* Vivid Orange-Gold */
+                }
+                @keyframes gradientShiftKey2 {
+                    0% { stop-color: #ffee00; }   /* Bright Neon Yellow */
+                    100% { stop-color: #ffffff; } /* White */
+                }
+                
+                /* Key Container - Enhanced Glow */
+                .christmas-mode .key-part {
+                    filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.6));
+                }
+                
+                @keyframes holidayPulse {
+                    0% { filter: drop-shadow(0 0 2px rgba(231, 76, 60, 0.4)); stroke-width: 14px; }
+                    100% { filter: drop-shadow(0 0 8px rgba(46, 204, 113, 0.6)); stroke-width: 15px; }
                 }
 
-                .christmas-mode #key line { animation-name: colorShiftGold; animation-duration: 5s; } /* Slower color shift */
-                .christmas-mode #key-head circle { animation-name: colorShiftRedGreen; fill: ${bgColor}; animation-duration: 5s; }
-                .christmas-mode .star { 
-                    animation: twinkle 1.2s ease-in-out infinite alternate, colorShiftAll 6s linear infinite; /* Slower twinkling */
-                }
-
-                @keyframes colorShiftRedGreen {
-                    0%, 100% { stroke: #ff4d4d; }
-                    50% { stroke: #2ecc71; }
-                }
-
-                @keyframes colorShiftGreenRed {
-                    0%, 100% { stroke: #2ecc71; }
-                    50% { stroke: #ff4d4d; }
-                }
-
-                @keyframes colorShiftGold {
-                    0%, 100% { stroke: #f1c40f; }
-                    50% { stroke: #ffffff; }
-                }
-
-                @keyframes colorShiftAll {
-                    0% { fill: #ff4d4d; stroke: #ff4d4d; }
-                    33% { fill: #2ecc71; stroke: #2ecc71; }
-                    66% { fill: #f1c40f; stroke: #f1c40f; }
-                    100% { fill: #ff4d4d; stroke: #ff4d4d; }
-                }
-
-                /* Keep the base animations but colorized */
-                .christmas-mode #key {
-                    animation: festiveRinging 8s ease-in-out infinite; /* Much slower ringing */
-                    transform-origin: 200px 16px; /* Hinged at top point */
-                    /* Strong festive shadow/glow */
-                    filter: drop-shadow(4px 4px 4px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 5px rgba(255, 255, 255, 0.2));
-                }
-
-                @keyframes festiveRinging {
-                    0%, 100% { transform: rotate(0deg); }
-                    25% { transform: rotate(4deg); }
-                    75% { transform: rotate(-4deg); }
-                }
                 /* -------------------------------------- */
 
                 @keyframes starTwinkle {
@@ -129,9 +126,29 @@ const SchoolLogo: React.FC<SchoolLogoProps> = ({ className = "", size = "100%", 
                     to { transform: rotate(360deg); }
                 }
 
+                .orbit-diagonal {
+                    transform-origin: 200px 200px;
+                    animation: rotateDiagonal 7s ease-in-out infinite;
+                }
+
+                .orbit-horizontal {
+                    transform-origin: 200px 200px;
+                    animation: rotateHorizontal 6s ease-in-out infinite;
+                }
+
+                @keyframes rotateDiagonal {
+                    0%, 100% { transform: rotate(-43deg); }
+                    50% { transform: rotate(-47deg); }
+                }
+
+                @keyframes rotateHorizontal {
+                    0%, 100% { transform: rotate(-2deg); }
+                    50% { transform: rotate(2deg); }
+                }
+
                 @keyframes float {
-                    0%, 100% { transform: translateY(5px); }
-                    50% { transform: translateY(-20px); }
+                    0%, 100% { transform: translateY(6px) rotate(-2deg); }
+                    50% { transform: translateY(-6px) rotate(2deg); }
                 }
 
                 @keyframes twinkle {
@@ -184,14 +201,18 @@ const SchoolLogo: React.FC<SchoolLogoProps> = ({ className = "", size = "100%", 
                         <stop offset="80%" stopColor="#ffffff" />
                         <stop offset="80%" stopColor="#ff4d4d" />
                         <stop offset="100%" stopColor="#ff4d4d" />
-                        <animateTransform 
-                            attributeName="gradientTransform" 
-                            type="rotate" 
-                            from="0 200 200" 
-                            to="360 200 200" 
-                            dur="6s" 
-                            repeatCount="indefinite" 
-                        />
+                    </linearGradient>
+
+                    {/* Futuristic Gradient for Rings */}
+                    <linearGradient id="ringGradient" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="400" y2="400">
+                        <stop offset="0%" stopColor="#ff0000" />
+                        <stop offset="100%" stopColor="#00ff00" />
+                    </linearGradient>
+
+                    {/* Futuristic Metallic Gradient for Key */}
+                    <linearGradient id="keyGradient" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="200" y2="400">
+                        <stop offset="0%" stopColor="#ffd700" />
+                        <stop offset="100%" stopColor="#f1c40f" />
                     </linearGradient>
                 </defs>
 
@@ -208,84 +229,57 @@ const SchoolLogo: React.FC<SchoolLogoProps> = ({ className = "", size = "100%", 
                             className="outer-rim"
                         />
 
-                        {/* 2. Background Orbit Rings (Both behind key initially) */}
-                        <g id="orbits">
+                        {/* LAYER 1: Key Bottom (Shaft & Teeth) - BEHIND RINGS */}
+                        <g transform="translate(-8, -8) rotate(-45 200 200)">
+                            <g className="key-part">
+                                {/* Key Shaft (Bottom Half) */}
+                                <line x1="200" y1="200" x2="200" y2="390" stroke={keyColor} strokeWidth="14" strokeLinecap="round" />
+                                {/* Key Teeth */}
+                                <line x1="200" y1="315" x2="240" y2="315" stroke={keyColor} strokeWidth="14" strokeLinecap="round" />
+                                <line x1="200" y1="350" x2="230" y2="350" stroke={keyColor} strokeWidth="14" strokeLinecap="round" />
+                            </g>
+                        </g>
+
+                        {/* LAYER 2: Orbit Rings */}
+                        <g id="orbits" style={{ filter: 'drop-shadow(0 0 3px rgba(255, 255, 255, 0.2))' }}>
                             {/* Diagonal Ring */}
                             <ellipse 
                                 cx="200" cy="200" rx="190" ry="85" 
                                 fill="none" stroke={color} strokeWidth="8" 
-                                transform="rotate(-45 200 200)" 
+                                className="orbit-diagonal"
                             />
                             {/* Horizontal Ring */}
                             <ellipse 
                                 cx="200" cy="200" rx="190" ry="65" 
                                 fill="none" stroke={color} strokeWidth="8" 
-                                transform="rotate(0 200 200)" 
+                                className="orbit-horizontal"
                             />
                         </g>
 
-                        {/* 3. The Key (Diagonal alignment via nested transform) */}
-                        <g transform="rotate(-45 200 200)">
-                            <g id="key">
-                                {/* Key Shaft - Slightly Thicker (14) */}
-                                <line x1="200" y1="16" x2="200" y2="384" stroke={color} strokeWidth="14" strokeLinecap="round" />
+                        {/* LAYER 3: Key Top (Head) - IN FRONT OF RINGS */}
+                        <g transform="translate(-8, -8) rotate(-45 200 200)">
+                            <g className="key-part">
+                                {/* Key Shaft (Top Half) */}
+                                <line x1="200" y1="41" x2="200" y2="200" stroke={keyColor} strokeWidth="14" strokeLinecap="round" />
                                 
-                                {/* Key Head - Shifted up and made slightly larger */}
                                 <g id="key-head">
-                                    {/* Top tucked in - Slightly larger (r=22) */}
-                                    <circle cx="200" cy="41" r="22" fill={bgColor} stroke={color} strokeWidth="5" />
-                                    {/* Left tucked in - Slightly larger (r=26) */}
-                                    <circle cx="168" cy="71" r="26" fill={bgColor} stroke={color} strokeWidth="5" />
-                                    {/* Right tucked in - Slightly larger (r=26) */}
-                                    <circle cx="232" cy="71" r="26" fill={bgColor} stroke={color} strokeWidth="5" />
+                                    {/* Top tucked in */}
+                                    <circle cx="200" cy="41" r="22" fill={bgColor} stroke={keyColor} strokeWidth="5" />
+                                    {/* Left tucked in */}
+                                    <circle cx="168" cy="71" r="26" fill={bgColor} stroke={keyColor} strokeWidth="5" />
+                                    {/* Right tucked in */}
+                                    <circle cx="232" cy="71" r="26" fill={bgColor} stroke={keyColor} strokeWidth="5" />
                                     
-                                    {/* Middle Circle ON TOP - Slightly larger (r=22) */}
-                                    <circle cx="200" cy="71" r="22" fill={bgColor} stroke={color} strokeWidth="5" />
+                                    {/* Middle Circle ON TOP */}
+                                    <circle cx="200" cy="71" r="22" fill={bgColor} stroke={keyColor} strokeWidth="5" />
 
-                                    {/* Thick line below head (Collar) - Slightly wider (44px) and thicker (12) */}
-                                    <line x1="178" y1="105" x2="222" y2="105" stroke={color} strokeWidth="12" strokeLinecap="round" />
+                                    {/* Thick line below head (Collar) */}
+                                    <line x1="178" y1="105" x2="222" y2="105" stroke={keyColor} strokeWidth="12" strokeLinecap="round" />
                                 </g>
-
-                                {/* Key Teeth - Slightly Thicker (14) and Longer */}
-                                <line x1="200" y1="310" x2="240" y2="310" stroke={color} strokeWidth="14" strokeLinecap="round" />
-                                <line x1="200" y1="345" x2="230" y2="345" stroke={color} strokeWidth="14" strokeLinecap="round" />
                             </g>
                         </g>
 
-                        {/* 4. Weaving Segments (Drawn OVER the key to create depth) */}
-                        
-                        {/* Segment 1: Top of horizontal ring (Key goes UNDER) */}
-                        <ellipse 
-                            cx="200" cy="200" rx="190" ry="65" 
-                            fill="none" stroke={color} strokeWidth="8" 
-                            strokeDasharray="100 1000" 
-                            strokeDashoffset="50" /* Top center */
-                            transform="rotate(0 200 200)" 
-                            className="weaving-segment"
-                        />
-
-                        {/* Segment 2: Bottom-Right intersection (Key goes BELOW BOTH) */}
-                        {/* We draw a bit of the diagonal ring here over the key */}
-                        <ellipse 
-                            cx="200" cy="200" rx="190" ry="85" 
-                            fill="none" stroke={color} strokeWidth="8" 
-                            strokeDasharray="120 1000" 
-                            strokeDashoffset="-240" /* Adjusted to cover the ~4 o'clock intersection */
-                            transform="rotate(-45 200 200)" 
-                            className="weaving-segment"
-                        />
-                        
-                        {/* We also draw a bit of the horizontal ring here over the key */}
-                        <ellipse 
-                            cx="200" cy="200" rx="190" ry="65" 
-                            fill="none" stroke={color} strokeWidth="8" 
-                            strokeDasharray="120 1000" 
-                            strokeDashoffset="-240" /* Adjusted to cover the ~4 o'clock intersection */
-                            transform="rotate(0 200 200)" 
-                            className="weaving-segment"
-                        />
-
-                        {/* 5. The Stars (Sparkles) - Twinkling & Repositioned (Slightly smaller ~100 units) */}
+                        {/* 5. The Stars (Sparkles) */}
                         <g fill={color}>
                             <path className="star" style={{ animationDuration: '4s' }} d="M 290 145 C 340 145 340 145 340 95 C 340 145 340 145 390 145 C 340 145 340 145 340 195 C 340 145 340 145 290 145 Z" />
                             <path className="star" style={{ animationDuration: '5.5s' }} d="M 25 185 C 75 185 75 185 75 135 C 75 185 75 185 125 185 C 75 185 75 185 75 235 C 75 185 75 185 25 185 Z" />

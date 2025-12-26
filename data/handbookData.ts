@@ -985,7 +985,7 @@ Additional Requirements for Interscholastic Athletics/ Students must:
 2. have on file with the Athletic Director of the school a current physical (per LHSAA regulation). Forms are available in the school office
 and on-line at the BFHS website under Athletics. Physicals must be completed before a student is allowed to participate in practices
 and games.
-3. submit a copy of the birth certificate to the new student portal.
+3. submit a copy of the birth certificate to the new Katherine Johnson Campus site.
 4. furnish the coach with all required LHSAA & LCMC forms signed by a parent or guardian.
 5. pay a participation fee determined by the administration at the beginning of each school year.
 NOTE: Participation fees are non-refundable and must be paid by a predetermined date for each sport. The payment of these fees does not

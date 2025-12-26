@@ -62,6 +62,11 @@ export const getSpotifyLoginUrl = async () => {
     return `${SPOTIFY_AUTH_ENDPOINT}?${params.toString()}`;
 };
 
+export const loginToSpotify = async () => {
+    const url = await getSpotifyLoginUrl();
+    window.location.href = url;
+};
+
 const clearHash = () => {
     if (!window.location.hash) return;
     window.history.replaceState({}, document.title, window.location.pathname + window.location.search);

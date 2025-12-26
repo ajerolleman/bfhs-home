@@ -6,45 +6,58 @@ import { UserProfile } from '../types';
 
 interface HeaderProps {
   onOpenChat: () => void;
-  onOpenProfile?: () => void;
-  userProfile?: UserProfile | null;
-  currentUser?: any;
+  onOpenProfile: () => void;
+  userProfile: UserProfile | null;
+  currentUser: any;
   compact?: boolean;
   isFocusMode?: boolean;
   onToggleFocus?: () => void;
   onOpenActivity?: () => void;
+  onOpenCommunity?: () => void;
   isPausedLogo?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ 
-    onOpenChat, 
-    onOpenProfile, 
-    userProfile, 
-    currentUser, 
+const Header: React.FC<HeaderProps> = ({
+    onOpenChat,
+    onOpenProfile,
+    userProfile,
+    currentUser,
     compact,
     isFocusMode,
     onToggleFocus,
     onOpenActivity,
-    isPausedLogo = false
+    onOpenCommunity,
+    isPausedLogo
 }) => {
+    // Helper to render text that flickers in Christmas Mode
+    const ChristmasText = ({ text, className = "" }: { text: string, className?: string }) => (
+        <span className={className}>
+            {text.split('').map((char, i) => (
+                <span key={i} className="christmas-text-char transition-colors duration-300">
+                    {char}
+                </span>
+            ))}
+        </span>
+    );
+
   return (
     <header className={`w-full bg-gradient-to-b from-[#1B3B2F] to-[#163127] text-white relative shadow-md z-10 transition-all duration-700 ease-[cubic-bezier(0.25,0.8,0.25,1)] ${compact ? 'pb-1 pt-1' : 'pb-2 pt-2'}`}>
       {/* Top utility bar */}
-      <div className={`container mx-auto px-4 mb-0 flex flex-col md:flex-row justify-between items-center text-xs md:text-sm text-white/90 font-medium tracking-wide gap-1 transition-all duration-700 ${compact ? 'opacity-100 h-auto py-1' : 'opacity-100 h-auto'}`}>
+      <div className={`container mx-auto px-4 mb-0 grid grid-cols-3 items-center text-xs md:text-sm text-white/90 font-medium tracking-wide gap-1 transition-all duration-700 ${compact ? 'opacity-100 h-auto py-1' : 'opacity-100 h-auto'}`}>
         
         {/* Left: Ticker & Status */}
-        <div className="flex items-center space-x-4 w-full md:w-auto justify-between md:justify-start">
+        <div className="flex items-center space-x-4 justify-start">
             {compact ? (
                 <div className="flex items-center gap-2 opacity-90">
                     <div className="w-6 h-6 rounded-full bg-white/10 border border-white/10 flex items-center justify-center">
                         <SchoolLogo className="w-4 h-4" isPaused={isPausedLogo} />
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest">BFHS Internal</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap">BFHS Internal</span>
                 </div>
             ) : (
                 <div className="flex items-center space-x-2 opacity-80 hover:opacity-100 transition-opacity duration-150 cursor-default">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                    <span className="hidden sm:inline">BFHS Internal</span>
+                    <span className="hidden sm:inline whitespace-nowrap">BFHS Internal</span>
                 </div>
             )}
             <div className={`${compact ? 'block' : 'hidden sm:block'}`}>
@@ -56,9 +69,26 @@ const Header: React.FC<HeaderProps> = ({
                 </div>
             )}
         </div>
+
+        {/* Center: Falcon Board Button */}
+        <div className="flex justify-center">
+            {onOpenCommunity && !compact && (
+                <button
+                    onClick={onOpenCommunity}
+                    className="group relative flex items-center gap-2 px-6 py-1.5 bg-[#f0e6d2] text-[#2c241b] border-2 border-[#d4c5a9] shadow-md hover:shadow-xl transition-all duration-300 transform -rotate-2 hover:-rotate-1"
+                    title="Falcon Board"
+                >
+                    {/* Tape Effect */}
+                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-12 h-4 bg-white/60 opacity-70 rotate-3 group-hover:opacity-100 transition-opacity"></div>
+                    
+                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline relative z-10">Falcon Board</span>
+                    <span className="text-sm relative z-10">🦅</span>
+                </button>
+            )}
+        </div>
         
         {/* Right: Controls */}
-        <div className="flex items-center space-x-2 shrink-0">
+        <div className="flex items-center space-x-2 justify-end">
             {/* Focus Button */}
             {onToggleFocus && !compact && (
                 <button
@@ -101,18 +131,14 @@ const Header: React.FC<HeaderProps> = ({
 
             <div className="flex flex-col items-center md:items-start text-center md:text-left">
                 <h1 className={`font-header font-bold uppercase tracking-tighter leading-[0.9] transform scale-y-110 text-white transition-all duration-700 ease-[cubic-bezier(0.25,0.8,0.25,1)] ${compact ? 'text-lg md:text-2xl' : 'text-2xl md:text-5xl lg:text-7xl'}`}>
-                    {"Benjamin Franklin".split("").map((char, i) => (
-                        <span key={`bf-${i}`} className="christmas-letter" style={{ animationDelay: `${i * 0.1}s` }}>{char}</span>
-                    ))}
+                    <ChristmasText text="Benjamin Franklin" />
                     <br/>
-                    {"High School".split("").map((char, i) => (
-                        <span key={`hs-${i}`} className="christmas-letter" style={{ animationDelay: `${(i + 16) * 0.1}s` }}>{char}</span>
-                    ))}
+                    <ChristmasText text="High School" />
                 </h1>
                 {/* Visible Divider Line (Falcon Gold) - Tighter Spacing */}
                 <div className={`w-2/3 h-1 bg-falcon-gold rounded-full shadow-[0_0_15px_rgba(234,179,8,0.4)] transition-all duration-700 ${compact ? 'mt-0.5 mb-0.5' : 'mt-1 mb-1'}`}></div>
                 <h2 className={`font-header font-medium uppercase tracking-[0.2em] text-white/90 transition-all duration-700 ease-[cubic-bezier(0.25,0.8,0.25,1)] ${compact ? 'text-[0.6rem] md:text-xs' : 'text-xs md:text-base lg:text-2xl'}`}>
-                    Katherine Johnson Campus
+                    <ChristmasText text="Katherine Johnson Campus" />
                 </h2>
             </div>
         </div>

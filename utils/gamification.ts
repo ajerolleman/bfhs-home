@@ -43,7 +43,7 @@ export const RANKS = [
     title: "Grandmaster", 
     minXP: 90000, 
     icon: "👑", 
-    description: "A legend of the Katherine Johnson campus. Your focus is an inspiration to others." 
+    description: "A legend of Ben Franklin. Your focus is an inspiration to others." 
   },
   { 
     level: 50, 
@@ -60,20 +60,20 @@ export const getRankTitle = (level: number): string => {
   return rank ? rank.title : RANKS[0].title;
 };
 
-// XP Formula: XP = 100 * (Level^2)
-// Level = Sqrt(XP / 100)
+// XP Formula: XP = 120 * (Level^2) - Slightly steeper curve
+// Level = Sqrt(XP / 120)
 export const calculateLevel = (xp: number): number => {
-  const level = Math.floor(Math.sqrt(xp / 100));
+  const level = Math.floor(Math.sqrt(xp / 120));
   return Math.max(1, level);
 };
 
 export const calculateXPForNextLevel = (level: number): number => {
-  return 100 * Math.pow(level + 1, 2);
+  return 120 * Math.pow(level + 1, 2);
 };
 
 export const calculateProgressToNextLevel = (xp: number, currentLevel: number): number => {
-  const currentLevelXP = 100 * Math.pow(currentLevel, 2);
-  const nextLevelXP = 100 * Math.pow(currentLevel + 1, 2);
+  const currentLevelXP = 120 * Math.pow(currentLevel, 2);
+  const nextLevelXP = 120 * Math.pow(currentLevel + 1, 2);
   
   const xpInLevel = xp - currentLevelXP;
   const xpNeeded = nextLevelXP - currentLevelXP;
@@ -81,14 +81,21 @@ export const calculateProgressToNextLevel = (xp: number, currentLevel: number): 
   return Math.min(100, Math.max(0, (xpInLevel / xpNeeded) * 100));
 };
 
-export const calculateSessionXP = (minutes: number): number => {
-  // Base: 10 XP per minute
-  // Bonus: +50 XP for sessions > 25 mins (Pomodoro)
-  // Bonus: +100 XP for sessions > 50 mins (Deep Work)
-  let xp = minutes * 10;
-  if (minutes >= 25) xp += 50;
-  if (minutes >= 50) xp += 100;
-  return Math.round(xp);
+export const calculateSessionXP = (seconds: number): number => {
+  // Base: ~10 XP per minute (0.166 XP per second)
+  // Bonus: +50 XP for sessions > 25 mins (1500s)
+  // Bonus: +100 XP for sessions > 50 mins (3000s)
+  let xp = seconds * 0.1666;
+  if (seconds >= 1500) xp += 50;
+  if (seconds >= 3000) xp += 100;
+  return Math.ceil(xp);
+};
+
+export const formatStudyTime = (totalMinutes: number): string => {
+  if (totalMinutes < 60) return `${Math.ceil(totalMinutes)}m`;
+  const h = Math.floor(totalMinutes / 60);
+  const m = Math.ceil(totalMinutes % 60);
+  return `${h}h ${m}m`;
 };
 
 export const checkStreak = (lastDateStr: string | null): { streak: number, isStreakContinues: boolean } => {

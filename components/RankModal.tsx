@@ -46,7 +46,7 @@ const RankModal: React.FC<RankModalProps> = ({ isOpen, onClose, stats, userEmail
               <div className="bg-gradient-to-r from-falcon-gold/20 to-yellow-500/20 p-6 rounded-3xl border border-falcon-gold/30 flex items-center gap-4">
                   <div className="text-3xl">👑</div>
                   <div>
-                      <div className="text-white font-black text-sm uppercase tracking-widest">Katherine Johnson Legend</div>
+                      <div className="text-white font-black text-sm uppercase tracking-widest">Ben Franklin Legend</div>
                       <p className="text-xs text-falcon-gold font-bold">Congrats! You are the highest rank in your class!</p>
                   </div>
               </div>
@@ -75,8 +75,9 @@ const RankModal: React.FC<RankModalProps> = ({ isOpen, onClose, stats, userEmail
 
   const xpForNextLevel = calculateXPForNextLevel(stats.level);
   const progressPercent = calculateProgressToNextLevel(stats.xp, stats.level);
-  const currentLevelXPStart = 100 * Math.pow(stats.level, 2);
-  const xpInLevel = stats.xp - currentLevelXPStart;
+  // Formula from gamification.ts is 120 * level^2
+  const currentLevelXPStart = 120 * Math.pow(stats.level, 2);
+  const xpInLevel = Math.max(0, stats.xp - currentLevelXPStart);
   const xpNeededInLevel = xpForNextLevel - currentLevelXPStart;
 
   return (
