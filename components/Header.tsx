@@ -70,22 +70,19 @@ const Header: React.FC<HeaderProps> = ({
             )}
         </div>
 
-        {/* Center: Falcon Board Pull-tab */}
-        <div className="flex justify-center relative">
+        {/* Center: Falcon Board Button */}
+        <div className="flex justify-center">
             {onOpenCommunity && !compact && (
                 <button
                     onClick={onOpenCommunity}
-                    className="group relative flex flex-col items-center pt-1 pb-3 px-4 bg-[#f0e6d2] text-[#2c241b] border-x-2 border-b-2 border-[#d4c5a9] shadow-md hover:shadow-xl transition-all duration-300 transform origin-top hover:translate-y-1 hover:rotate-1 active:translate-y-2"
-                    title="Pull Down Falcon Board"
+                    className="group relative flex items-center gap-2 px-6 py-1.5 bg-[#f0e6d2] text-[#2c241b] border-2 border-[#d4c5a9] shadow-md hover:shadow-xl transition-all duration-300 transform -rotate-2 hover:-rotate-1"
+                    title="Falcon Board"
                 >
-                    {/* Mounting Tape */}
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-16 h-6 bg-white/40 opacity-80 rotate-1 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+                    {/* Tape Effect */}
+                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-12 h-4 bg-white/60 opacity-70 rotate-3 group-hover:opacity-100 transition-opacity"></div>
                     
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] hidden sm:inline relative z-10 leading-none mb-1">Falcon Board</span>
-                    <span className="text-xl relative z-10 animate-bounce group-hover:animate-none">🪝</span>
-                    
-                    {/* String/Handle Effect */}
-                    <div className="absolute bottom-1 w-8 h-0.5 bg-[#2c241b]/20 rounded-full"></div>
+                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline relative z-10">Falcon Board</span>
+                    <span className="text-sm relative z-10">🦅</span>
                 </button>
             )}
         </div>
