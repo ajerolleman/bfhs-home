@@ -13,12 +13,12 @@ const CommunityOverlay: React.FC<CommunityOverlayProps> = ({ isOpen, onClose, us
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-0 md:p-4">
-            {/* Backdrop */}
+        <div className="fixed inset-0 z-[200] flex flex-col">
+            {/* Backdrop (invisible but stays for logical closing if needed) */}
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={onClose} />
             
-            {/* The Board itself - Clunky Expansion */}
-            <div className="relative w-full h-full md:rounded-3xl shadow-2xl flex flex-col bg-[#2c241b] animate-expand-clunky origin-top overflow-hidden font-sans">
+            {/* The Board itself - Clunky Expansion (Full Screen) */}
+            <div className="relative w-full h-full shadow-2xl flex flex-col bg-[#2c241b] animate-expand-clunky origin-top overflow-hidden font-sans">
                 {/* Corkboard Texture Effect */}
                 <div className="absolute inset-0 opacity-40 pointer-events-none" 
                      style={{ 
